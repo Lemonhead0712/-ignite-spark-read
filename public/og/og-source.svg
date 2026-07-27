@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1A0F1E"/>
+      <stop offset="100%" stop-color="#241428"/>
+    </linearGradient>
+    <linearGradient id="ember" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FF6B4A"/>
+      <stop offset="100%" stop-color="#FFB347"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FF6B4A" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#FF6B4A" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <circle cx="1005" cy="315" r="320" fill="url(#glow)"/>
+
+  <g transform="translate(985 315) scale(2.75) translate(-256 -256)">
+    <path d="M256 96c18 62-34 84-34 138 0 40 30 70 68 70 4 0 8 0 12-1-10 16-28 27-50 27-46 0-84-38-84-90 0-70 56-104 88-144z" fill="url(#ember)"/>
+    <path d="M256 220c10 30-14 42-14 66 0 20 16 34 34 34 22 0 40-18 40-42 0-38-32-38-60-58z" fill="url(#ember)" opacity="0.85"/>
+  </g>
+
+  <text x="90" y="255" font-family="Georgia, 'Times New Roman', serif" font-size="108" fill="#F5EDE6">Ig<tspan font-style="italic" fill="#FF9B6A">nite</tspan></text>
+
+  <text x="92" y="305" font-family="Arial, Helvetica, sans-serif" font-size="30" letter-spacing="6" fill="#FFB347" font-weight="bold">SPARK READ</text>
+
+  <text x="90" y="380" font-family="Georgia, 'Times New Roman', serif" font-size="46" fill="#F5EDE6">Know what they want,</text>
+  <text x="90" y="432" font-family="Georgia, 'Times New Roman', serif" font-size="46" font-style="italic" fill="#F5EDE6">without asking.</text>
+
+  <text x="90" y="490" font-family="Arial, Helvetica, sans-serif" font-size="26" fill="rgba(245,237,230,0.64)">Two minutes. Zero mercy.</text>
+
+  <text x="90" y="560" font-family="Arial, Helvetica, sans-serif" font-size="24" letter-spacing="1" fill="rgba(245,237,230,0.5)">sparkread.netlify.app</text>
+</svg>

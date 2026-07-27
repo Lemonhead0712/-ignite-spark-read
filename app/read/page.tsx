@@ -1,9 +1,26 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { Brand } from "@/components/ui/Brand";
 import { decodeInvitePayload } from "@/lib/engine";
 
 function article(name: string): string {
   return /^[aeiou]/i.test(name) ? "An" : "A";
+}
+
+export function generateMetadata({ searchParams }: { searchParams: { invite?: string } }): Metadata {
+  const invite = searchParams.invite ? decodeInvitePayload(searchParams.invite) : null;
+  if (!invite) {
+    return { title: "Invite — Ignite Spark Read" };
+  }
+  const title = `${article(invite.u)} ${invite.u} took a Spark Read on you`;
+  const description = `As ${article(invite.p).toLowerCase()} ${invite.p}, they scored ${invite.s}/100 with you — and sealed 3 guesses about how you'd answer. Take your own read to find out how right they were.`;
+  const images = [{ url: "/og/og-image.png", width: 1200, height: 630, alt: title }];
+  return {
+    title,
+    description,
+    openGraph: { title, description, images, type: "website" },
+    twitter: { title, description, images, card: "summary_large_image" },
+  };
 }
 
 export default function ReadInvitePage({ searchParams }: { searchParams: { invite?: string } }) {
