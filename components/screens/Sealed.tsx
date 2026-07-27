@@ -12,7 +12,7 @@ export function Sealed({ onCopyInvite, onBack }: { onCopyInvite: () => void; onB
           Your guesses are locked into your invite. Send it — when they finish their read, you both find out how well
           you really know each other.
         </p>
-        <Button onClick={onCopyInvite}>Copy invite link</Button>
+        <Button onClick={onCopyInvite}>Copy invite to send</Button>
         <Button variant="ghost" onClick={onBack}>
           Back to my read
         </Button>
