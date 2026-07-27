@@ -1,0 +1,1035 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Ignite — Spark Read</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* palette */
+    --night:#1A0F1E; --night-2:#241428; --card:#2B1830;
+    --ember-1:#FF6B4A; --ember-2:#FFB347;
+    --rose:#E8A0B4; --rose-deep:#D97A96;
+    --ivory:#F5EDE6; --ivory-dim:rgba(245,237,230,.64);
+    --line:rgba(232,160,180,.16);
+    /* identity: You = ember, Them = rose (app-wide) */
+    --you:var(--ember-1); --them:var(--rose-deep);
+    /* type scale */
+    --fs-hero:clamp(2.5rem,9vw,3.4rem);
+    --fs-title:1.9rem;      /* screen titles */
+    --fs-question:1.6rem;   /* quiz/guess questions */
+    --fs-section:1.32rem;   /* card headings */
+    --fs-body:.95rem;
+    --fs-meta:.8rem;
+    --fs-label:.68rem;      /* eyebrows / tags */
+    /* rhythm */
+    --sp-1:8px; --sp-2:14px; --sp-3:22px; --sp-4:32px; --sp-5:48px;
+    --radius:20px; --radius-sm:14px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{font-family:'Outfit',sans-serif;background:var(--night);color:var(--ivory);line-height:1.6;overflow-x:hidden}
+  body::before{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+    background:
+      radial-gradient(60% 40% at 80% -5%, rgba(255,107,74,.13), transparent 70%),
+      radial-gradient(50% 35% at 10% 105%, rgba(255,179,71,.09), transparent 70%);
+  }
+  .app{position:relative;z-index:1;max-width:480px;margin:0 auto;min-height:100dvh;display:flex;flex-direction:column;padding:var(--sp-3) 20px calc(var(--sp-3) + env(safe-area-inset-bottom))}
+  .screen{display:none;flex:1;flex-direction:column;animation:fadeUp .45s ease both}
+  .screen.active{display:flex}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion: reduce){*{animation-duration:.001s !important;transition-duration:.001s !important}}
+
+  /* ---------- shared header system ---------- */
+  .brand{font-family:'Instrument Serif',serif;font-size:1.35rem;letter-spacing:.02em}
+  .brand em{font-style:italic;background:linear-gradient(90deg,var(--ember-1),var(--ember-2));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--sp-2);min-height:32px}
+  .topbar button{background:none;border:none;color:var(--ivory-dim);font-family:'Outfit';font-size:var(--fs-meta);cursor:pointer;padding:6px 2px}
+  .topbar button:focus-visible{outline:2px solid var(--ember-2);outline-offset:3px;border-radius:6px}
+  .eyebrow{font-size:var(--fs-label);letter-spacing:.24em;text-transform:uppercase;color:var(--rose);display:block;margin-bottom:var(--sp-1)}
+  .screen-title{font-family:'Instrument Serif',serif;font-weight:400;font-size:var(--fs-title);line-height:1.18;margin-bottom:6px}
+  .screen-sub{color:var(--ivory-dim);font-size:var(--fs-body);margin-bottom:var(--sp-4)}
+
+  /* ---------- landing ---------- */
+  .hero{flex:1;display:flex;flex-direction:column;justify-content:center;gap:var(--sp-3);padding-bottom:var(--sp-5)}
+  h1{font-family:'Instrument Serif',serif;font-weight:400;font-size:var(--fs-hero);line-height:1.08}
+  h1 em{font-style:italic;background:linear-gradient(90deg,var(--ember-1),var(--ember-2));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .lede{color:var(--ivory-dim);font-size:1.04rem;max-width:34ch}
+  .hero-meta{display:flex;gap:18px;color:var(--ivory-dim);font-size:var(--fs-meta)}
+  .hero-meta span{display:flex;align-items:center;gap:7px}
+  .dot{width:5px;height:5px;border-radius:50%;background:linear-gradient(90deg,var(--ember-1),var(--ember-2))}
+
+  /* ---------- buttons (one hierarchy, app-wide) ---------- */
+  .btn{
+    font-family:'Outfit';font-weight:600;font-size:1rem;color:var(--night);
+    background:linear-gradient(90deg,var(--ember-1),var(--ember-2));
+    border:none;border-radius:999px;padding:16px 28px;cursor:pointer;width:100%;
+    transition:transform .15s ease;box-shadow:0 8px 28px rgba(255,107,74,.26);
+  }
+  .btn:active{transform:scale(.98)}
+  .btn:focus-visible{outline:2px solid var(--ivory);outline-offset:3px}
+  .btn.ghost{background:transparent;color:var(--ivory);border:1px solid var(--line);box-shadow:none}
+  .btn+.btn{margin-top:var(--sp-2)}
+
+  /* ---------- sign picker (identity tint: You step = ember, Them step = rose) ---------- */
+  .sign-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:var(--sp-3)}
+  .sign{
+    background:var(--card);border:1px solid var(--line);border-radius:var(--radius-sm);
+    padding:15px 6px;text-align:center;cursor:pointer;color:var(--ivory);
+    font-family:'Outfit';transition:border-color .15s, background .15s;
+  }
+  .sign:focus-visible{outline:2px solid var(--ember-2);outline-offset:2px}
+  .sign .glyph{font-size:1.5rem;display:block;margin-bottom:5px;color:var(--rose)}
+  .sign .nm{font-size:.8rem;font-weight:600;letter-spacing:.02em}
+  .sign .dt{font-size:.64rem;color:var(--ivory-dim)}
+  .picking-you .sign.sel{border-color:var(--you);background:linear-gradient(180deg,rgba(255,107,74,.16),rgba(255,179,71,.05))}
+  .picking-them .sign.sel{border-color:var(--them);background:linear-gradient(180deg,rgba(217,122,150,.18),rgba(217,122,150,.05))}
+  .sign.sel .glyph{color:var(--ember-2)}
+  .picking-them .sign.sel .glyph{color:var(--rose)}
+
+  /* ---------- quiz + guess (shared components) ---------- */
+  .progress{height:4px;background:var(--night-2);border-radius:99px;overflow:hidden;margin-bottom:var(--sp-2)}
+  .progress i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--ember-1),var(--ember-2));border-radius:99px;transition:width .35s ease}
+  .qcount{font-size:var(--fs-label);letter-spacing:.2em;text-transform:uppercase;color:var(--rose);margin-bottom:var(--sp-3)}
+  .qtext{font-family:'Instrument Serif',serif;font-weight:400;font-size:var(--fs-question);line-height:1.24;margin-bottom:var(--sp-4);min-height:3.6em}
+  .opts{display:flex;flex-direction:column;gap:11px}
+  .opt{
+    text-align:left;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    padding:16px 18px;color:var(--ivory);font-family:'Outfit';font-size:var(--fs-body);line-height:1.45;
+    cursor:pointer;transition:border-color .15s,transform .1s;
+  }
+  .opt:active{transform:scale(.985)}
+  .opt:focus-visible{outline:2px solid var(--ember-2);outline-offset:2px}
+  .opt:hover{border-color:rgba(255,107,74,.55)}
+
+  /* ---------- ignition ---------- */
+  .ignition{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:var(--sp-3);text-align:center}
+  .orbit{position:relative;width:220px;height:120px}
+  .orb-glyph{position:absolute;top:50%;font-family:'Instrument Serif',serif;font-size:3.2rem;transform:translateY(-50%);transition:left 1.6s cubic-bezier(.6,0,.3,1), right 1.6s cubic-bezier(.6,0,.3,1)}
+  #orbA{left:0;color:var(--you)} #orbB{right:0;color:var(--them)}
+  .orbit.lit #orbA{left:calc(50% - 42px)} .orbit.lit #orbB{right:calc(50% - 42px)}
+  .flare{position:absolute;left:50%;top:50%;width:10px;height:10px;border-radius:50%;transform:translate(-50%,-50%) scale(0);opacity:0;background:radial-gradient(circle,var(--ember-2),var(--ember-1) 55%,transparent 75%)}
+  .orbit.lit .flare{animation:flare 1s .9s ease-out forwards}
+  @keyframes flare{0%{transform:translate(-50%,-50%) scale(0);opacity:0}45%{opacity:1}100%{transform:translate(-50%,-50%) scale(15);opacity:0}}
+  .ig-text{font-family:'Instrument Serif',serif;font-size:1.3rem;color:var(--ivory-dim);font-style:italic}
+
+  /* ---------- step 1→2 transition ---------- */
+  #s-step{transition:opacity .5s ease;opacity:1}
+  #s-step.fading{opacity:0}
+  .step-glyph{
+    font-family:'Instrument Serif',serif;font-size:4.2rem;line-height:1;color:var(--you);
+    animation:glyphIn 1s cubic-bezier(.25,.8,.3,1) both;
+    text-shadow:0 0 34px rgba(255,107,74,.5);
+  }
+  @keyframes glyphIn{from{transform:scale(.75);opacity:0;filter:blur(6px)}to{transform:scale(1);opacity:1;filter:blur(0)}}
+  .step-text{font-family:'Instrument Serif',serif;font-size:1.35rem;animation:softUp .8s .35s ease-out both}
+  .step-you{color:var(--you)}
+  .step-next{font-size:var(--fs-body);color:var(--them);animation:softUp .8s .8s ease-out both}
+  @keyframes softUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  #s-step2{transition:opacity .5s ease;opacity:1}
+  #s-step2.fading{opacity:0}
+  .them-glyph{color:var(--them);text-shadow:0 0 34px rgba(217,122,150,.5)}
+  .you-next{color:var(--ember-2)}
+  #step2-react{font-style:italic}
+  .step-desc{
+    color:var(--ivory-dim);font-size:var(--fs-body);max-width:32ch;text-align:center;line-height:1.6;
+    animation:softUp .8s .6s ease-out both;
+  }
+  .step-btn{max-width:320px;animation:softUp .8s 1.1s ease-out both}
+
+  /* ---------- question packs ---------- */
+  .pack-card{
+    width:100%;text-align:left;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    padding:var(--sp-3);margin-bottom:var(--sp-2);cursor:pointer;color:var(--ivory);font-family:'Outfit';
+    transition:border-color .15s,transform .1s;
+  }
+  .pack-card:active{transform:scale(.985)}
+  .pack-card:hover{border-color:rgba(255,107,74,.5)}
+  .pack-card:focus-visible{outline:2px solid var(--ember-2);outline-offset:2px}
+  .pack-emoji{font-size:1.6rem;display:block;margin-bottom:6px}
+  .pack-name{font-family:'Instrument Serif',serif;font-size:var(--fs-section);margin-bottom:2px}
+  .pack-desc{font-size:var(--fs-meta);color:var(--ivory-dim);line-height:1.5}
+  .pack-meta{font-size:var(--fs-label);letter-spacing:.16em;text-transform:uppercase;color:var(--rose);margin-top:var(--sp-1);display:block}
+  .k-q{font-size:var(--fs-meta);color:var(--ivory-dim);font-style:italic;margin:var(--sp-2) 0 6px}
+  .k-q:first-child{margin-top:0}
+  .k-match{font-size:.75rem;font-weight:600;margin-top:4px}
+
+  /* ---------- results (shared card system) ---------- */
+  .result-head{text-align:center;margin-bottom:var(--sp-4)}
+  .pairline{font-size:var(--fs-label);letter-spacing:.2em;text-transform:uppercase;color:var(--ivory-dim);margin-bottom:6px}
+  .pairline .you-g{color:var(--you)} .pairline .them-g{color:var(--them)}
+  .section{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:var(--sp-3);margin-bottom:var(--sp-3)}
+  .tag{font-size:var(--fs-label);letter-spacing:.2em;text-transform:uppercase;margin-bottom:var(--sp-2);display:inline-block;color:var(--ember-2)}
+  .tag.them{color:var(--them)}
+  .section h3{font-family:'Instrument Serif',serif;font-weight:400;font-size:var(--fs-section);margin-bottom:var(--sp-1)}
+  .section p{color:var(--ivory-dim);font-size:var(--fs-body);margin-bottom:var(--sp-2)}
+  .section p:last-child{margin-bottom:0}
+  .section p strong{color:var(--ivory);font-weight:600}
+  .kicker{
+    font-family:'Instrument Serif',serif;font-style:italic;font-size:1.02rem;color:var(--rose);
+    border-top:1px solid var(--line);padding-top:var(--sp-2);margin-top:var(--sp-2);
+  }
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:var(--sp-2)}
+  .chip{font-size:.74rem;font-weight:500;padding:6px 13px;border-radius:99px;border:1px solid var(--line);color:var(--rose)}
+  .sec-them{background:linear-gradient(180deg,rgba(217,122,150,.10),rgba(43,24,48,.92));border-color:rgba(217,122,150,.32)}
+
+  /* ---------- spark score ---------- */
+  .score-wrap{display:flex;flex-direction:column;align-items:center;gap:var(--sp-2);margin-bottom:var(--sp-4)}
+  .score-ring{
+    width:158px;height:158px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+    background:
+      radial-gradient(closest-side, var(--night) 88%, transparent 89% 100%),
+      conic-gradient(var(--ember-1) 0deg, var(--ember-2) calc(var(--pct,0)*3.6deg), var(--night-2) 0deg);
+  }
+  .score-num{font-family:'Instrument Serif',serif;font-size:3.4rem;font-weight:400;line-height:1;background:linear-gradient(90deg,var(--ember-1),var(--ember-2));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .score-lbl{font-size:var(--fs-label);letter-spacing:.22em;text-transform:uppercase;color:var(--ivory-dim)}
+  .score-tease{font-size:var(--fs-meta);color:var(--ivory-dim);text-align:center;max-width:32ch;line-height:1.55}
+
+  /* ---------- premium / invite ---------- */
+  .premium{border:1px dashed rgba(255,179,71,.45);border-radius:var(--radius);padding:var(--sp-3);text-align:center;margin-bottom:var(--sp-3)}
+  .premium h4{font-family:'Instrument Serif',serif;font-weight:400;font-size:var(--fs-section);margin-bottom:6px}
+  .premium p{color:var(--ivory-dim);font-size:var(--fs-meta);margin-bottom:var(--sp-2);line-height:1.55}
+  .actions{display:flex;flex-direction:column;margin-top:4px;padding-bottom:var(--sp-1)}
+
+  /* ---------- paired screen: identity header + comparison ---------- */
+  .duo-head{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:var(--sp-3)}
+  .duo-card{border-radius:var(--radius-sm);padding:var(--sp-2);text-align:center;border:1px solid}
+  .duo-card .g{font-family:'Instrument Serif',serif;font-size:2rem;display:block;line-height:1.1}
+  .duo-card .who{font-size:var(--fs-label);letter-spacing:.18em;text-transform:uppercase;display:block;margin-top:4px}
+  .duo-card .sn{font-size:var(--fs-meta);font-weight:600}
+  .duo-you{border-color:rgba(255,107,74,.4);background:rgba(255,107,74,.07)}
+  .duo-you .g,.duo-you .who{color:var(--you)}
+  .duo-them{border-color:rgba(217,122,150,.4);background:rgba(217,122,150,.08)}
+  .duo-them .g,.duo-them .who{color:var(--them)}
+
+  .cmp-row{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid var(--line);font-size:var(--fs-meta)}
+  .cmp-row:last-child{border-bottom:none}
+  .cmp-row .mid{font-size:var(--fs-label);letter-spacing:.14em;text-transform:uppercase;color:var(--ivory-dim);text-align:center;white-space:nowrap}
+  .cmp-row .l{text-align:right;color:var(--you);font-weight:600}
+  .cmp-row .r{text-align:left;color:var(--them);font-weight:600}
+
+  .guess-card{border:1px solid var(--line);border-radius:var(--radius-sm);padding:var(--sp-2);margin-bottom:10px}
+  .guess-card:last-of-type{margin-bottom:0}
+  .guess-q{font-size:var(--fs-meta);color:var(--ivory-dim);margin-bottom:var(--sp-1);font-style:italic}
+  .guess-row{display:flex;justify-content:space-between;gap:10px;font-size:var(--fs-meta);margin-bottom:4px}
+  .guess-row .who{flex-shrink:0;font-weight:600;font-size:var(--fs-label);letter-spacing:.1em;text-transform:uppercase;padding-top:2px}
+  .guess-row.you .who{color:var(--you)} .guess-row.them .who{color:var(--them)}
+  .guess-hit{font-size:.75rem;font-weight:600;margin-top:8px}
+  .hit{color:var(--ember-2)} .miss{color:var(--ivory-dim)}
+
+  .cc-list{margin:0;padding-left:0;list-style:none}
+  .cc-h{font-size:var(--fs-label);letter-spacing:.2em;text-transform:uppercase;margin:var(--sp-2) 0 4px}
+  .cc-h.click{color:var(--ember-2)} .cc-h.clash{color:var(--rose)}
+  .cc-h:first-child{margin-top:0}
+  .cc-list li{padding:7px 0 7px 22px;position:relative;color:var(--ivory-dim);font-size:var(--fs-body)}
+  .cc-list li::before{content:"";position:absolute;left:4px;top:15px;width:6px;height:6px;border-radius:50%}
+  .cc-list.click li::before{background:linear-gradient(90deg,var(--ember-1),var(--ember-2))}
+  .cc-list.clash li::before{background:var(--rose)}
+
+  .toast{
+    position:fixed;left:50%;bottom:32px;transform:translateX(-50%) translateY(80px);
+    background:var(--ivory);color:var(--night);font-weight:600;font-size:var(--fs-meta);
+    padding:11px 22px;border-radius:99px;transition:transform .3s ease;z-index:50;
+  }
+  .toast.show{transform:translateX(-50%) translateY(0)}
+  .copysheet{position:fixed;inset:0;background:rgba(26,15,30,.85);display:none;align-items:flex-end;justify-content:center;z-index:60;backdrop-filter:blur(4px)}
+  .copysheet.show{display:flex}
+  .copysheet-inner{width:100%;max-width:480px;background:var(--card);border:1px solid var(--line);border-radius:var(--radius) var(--radius) 0 0;padding:var(--sp-3);display:flex;flex-direction:column;gap:var(--sp-2)}
+  .copysheet-title{font-size:var(--fs-meta);color:var(--ivory-dim)}
+  #copysheet-text{width:100%;background:var(--night-2);color:var(--ivory);border:1px solid var(--line);border-radius:var(--radius-sm);padding:12px;font-family:'Outfit';font-size:var(--fs-meta);line-height:1.5;resize:none}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- LANDING -->
+  <section class="screen active" id="s-landing">
+    <div class="topbar"><span class="brand">Ig<em>nite</em></span></div>
+    <div class="hero">
+      <span class="eyebrow">Spark Read</span>
+      <h1>Know what they want, <em>without asking.</em></h1>
+      <p class="lede">Ten questions about you. One suspiciously accurate read on them. Two minutes, and you'll know things they haven't said out loud.</p>
+      <div class="hero-meta">
+        <span><i class="dot"></i>2 minutes</span>
+        <span><i class="dot"></i>No sign-up</span>
+        <span><i class="dot"></i>Free</span>
+      </div>
+    </div>
+    <button class="btn" onclick="go('s-signs')">Start your Spark Read</button>
+  </section>
+
+  <!-- SIGN INPUT -->
+  <section class="screen picking-you" id="s-signs">
+    <div class="topbar"><button onclick="go('s-landing')">← Back</button><span class="brand">Ig<em>nite</em></span></div>
+    <span class="eyebrow" id="sign-eyebrow">Step 1 of 2 · You</span>
+    <h2 class="screen-title" id="sign-title">First things first — what's your sign?</h2>
+    <p class="screen-sub" id="sign-sub">Sun sign is all we need. We're quick like that.</p>
+    <div class="sign-grid" id="sign-grid"></div>
+  </section>
+
+  <!-- STEP TRANSITION -->
+  <section class="screen" id="s-step">
+    <div class="ignition">
+      <span class="step-glyph" id="step-glyph"></span>
+      <div class="step-text"><span class="step-you" id="step-name"></span> — noted.</div>
+      <p class="step-desc" id="step-desc"></p>
+      <button class="btn step-btn" onclick="toPartnerPick()">Next — who's on your mind?</button>
+    </div>
+  </section>
+
+  <!-- STEP 2 REACTION -->
+  <section class="screen" id="s-step2">
+    <div class="ignition">
+      <span class="step-glyph them-glyph" id="step2-glyph"></span>
+      <div class="step-text" id="step2-react"></div>
+      <p class="step-desc" id="step2-desc"></p>
+      <div class="step-next you-next" id="step2-next"></div>
+      <button class="btn step-btn" onclick="startQuiz()">Continue — let's do this</button>
+    </div>
+  </section>
+
+  <!-- QUIZ -->
+  <section class="screen" id="s-quiz">
+    <div class="topbar"><button onclick="restart()">✕ Exit</button><span class="brand">Ig<em>nite</em></span></div>
+    <div class="progress"><i id="pbar"></i></div>
+    <div class="qcount" id="qcount"></div>
+    <div class="qtext" id="qtext"></div>
+    <div class="opts" id="opts"></div>
+  </section>
+
+  <!-- IGNITION -->
+  <section class="screen" id="s-ignite">
+    <div class="ignition">
+      <div class="orbit" id="orbit">
+        <span class="orb-glyph" id="orbA"></span>
+        <span class="orb-glyph" id="orbB"></span>
+        <span class="flare"></span>
+      </div>
+      <div class="ig-text" id="igtext">Reading your spark…</div>
+    </div>
+  </section>
+
+  <!-- SOLO RESULT -->
+  <section class="screen" id="s-result">
+    <div class="topbar"><button onclick="restart()">↺ Retake</button><span class="brand">Ig<em>nite</em></span></div>
+    <div class="result-head">
+      <div class="pairline" id="pairline"></div>
+      <h2 class="screen-title">Your Spark Read</h2>
+    </div>
+
+    <div class="score-wrap">
+      <div class="score-ring" id="score-ring">
+        <span class="score-num" id="score-num">0</span>
+        <span class="score-lbl">Spark Score</span>
+      </div>
+      <p class="score-tease" id="score-tease"></p>
+    </div>
+
+    <div class="section sec-you">
+      <span class="tag">About you · from your answers</span>
+      <div class="chips" id="you-chips"></div>
+      <div id="you-body"></div>
+    </div>
+
+    <div class="section sec-them">
+      <span class="tag them">Their likely dynamic · a pattern-based read</span>
+      <div id="them-body"></div>
+    </div>
+
+    <div class="premium" id="guess-entry">
+      <h4>Think you know them?</h4>
+      <p>Guess how they'd answer 3 questions. Your guesses get sealed into your invite — when they take their own read, you both find out how right you were. No pressure. (Some pressure.)</p>
+      <button class="btn ghost" onclick="startGuess()">Play Guess Mode</button>
+    </div>
+
+    <div class="actions">
+      <button class="btn" onclick="shareResult()">Copy my read to share</button>
+      <button class="btn ghost" onclick="restart()">Start a new read</button>
+    </div>
+  </section>
+
+  <!-- GUESS MODE -->
+  <section class="screen" id="s-guess">
+    <div class="topbar"><button onclick="go('s-result')">← Back to results</button><span class="brand">Ig<em>nite</em></span></div>
+    <div class="progress"><i id="gbar"></i></div>
+    <div class="qcount" id="gcount"></div>
+    <div class="qtext" id="gtext"></div>
+    <div class="opts" id="gopts"></div>
+  </section>
+
+  <!-- GUESS SEALED -->
+  <section class="screen" id="s-sealed">
+    <div class="topbar"><button onclick="go('s-result')">← Results</button><span class="brand">Ig<em>nite</em></span></div>
+    <div class="ignition" style="gap:18px">
+      <div style="font-size:3rem">🔒</div>
+      <h2 class="screen-title" style="text-align:center">Sealed. No takebacks.</h2>
+      <p class="screen-sub" style="text-align:center;max-width:32ch;margin-bottom:0">Your guesses are locked into your invite. Send it — when they finish their read, you both find out how well you *really* know each other.</p>
+      <button class="btn" onclick="copyInvite()">Copy invite link</button>
+      <button class="btn ghost" onclick="previewPaired()">Preview the paired read (demo)</button>
+      <button class="btn ghost" onclick="go('s-result')">Back to my read</button>
+    </div>
+  </section>
+
+  <!-- PAIRED RESULT (V2 preview, simulated partner data) -->
+  <section class="screen" id="s-paired">
+    <div class="topbar"><button onclick="go('s-result')">← My solo read</button><span class="brand">Ig<em>nite</em></span></div>
+    <div class="result-head">
+      <div class="pairline" id="p-pairline"></div>
+      <h2 class="screen-title">Your Read, Together</h2>
+      <p class="screen-sub" style="margin-bottom:0">Demo preview · their answers are simulated</p>
+    </div>
+
+    <div class="duo-head" id="duo-head"></div>
+
+    <div class="score-wrap">
+      <div class="score-ring" id="p-ring">
+        <span class="score-num" id="p-num">0</span>
+        <span class="score-lbl">True Spark Score</span>
+      </div>
+      <p class="score-tease" id="p-delta"></p>
+    </div>
+
+    <div class="section">
+      <span class="tag">Guess reveal · how well you know them</span>
+      <div id="p-guesses"></div>
+    </div>
+
+    <div class="section">
+      <span class="tag">Side by side</span>
+      <div id="p-compare"></div>
+    </div>
+
+    <div class="section sec-them">
+      <span class="tag them">Your dynamic · from both of your answers</span>
+      <div id="p-dynamic"></div>
+    </div>
+
+    <div class="section">
+      <span class="tag">The fine print of you two</span>
+      <div id="p-clash"></div>
+    </div>
+
+    <div class="premium">
+      <h4>Keep it going</h4>
+      <p>Question packs for the two of you — new ways to compare notes, whenever you're ready.</p>
+      <button class="btn ghost" onclick="openPacks()">Browse question packs</button>
+    </div>
+  </section>
+
+  <!-- QUESTION PACKS: BROWSER -->
+  <section class="screen" id="s-packs">
+    <div class="topbar"><button onclick="go('s-paired')">← Back</button><span class="brand">Ig<em>nite</em></span></div>
+    <span class="eyebrow">Question Packs · Premium</span>
+    <h2 class="screen-title">Pick your next conversation.</h2>
+    <p class="screen-sub">Five questions each. You both answer, then compare. Demo mode: their answers are simulated.</p>
+    <div id="pack-list"></div>
+  </section>
+
+  <!-- QUESTION PACKS: PLAYER -->
+  <section class="screen" id="s-pack">
+    <div class="topbar"><button onclick="go('s-packs')">✕ Exit pack</button><span class="brand">Ig<em>nite</em></span></div>
+    <div class="progress"><i id="kbar"></i></div>
+    <div class="qcount" id="kcount"></div>
+    <div class="qtext" id="ktext"></div>
+    <div class="opts" id="kopts"></div>
+  </section>
+
+  <!-- QUESTION PACKS: RESULTS -->
+  <section class="screen" id="s-packdone">
+    <div class="topbar"><button onclick="go('s-packs')">← More packs</button><span class="brand">Ig<em>nite</em></span></div>
+    <div class="result-head">
+      <div class="pairline" id="k-pairline"></div>
+      <h2 class="screen-title" id="k-title"></h2>
+      <p class="screen-sub" style="margin-bottom:0">Demo preview · their answers are simulated</p>
+    </div>
+    <div class="section">
+      <span class="tag">Side by side · answer for answer</span>
+      <div id="k-compare"></div>
+    </div>
+    <div class="actions">
+      <button class="btn" onclick="go('s-packs')">Try another pack</button>
+      <button class="btn ghost" onclick="go('s-paired')">Back to your read</button>
+    </div>
+  </section>
+
+</div>
+<div class="toast" id="toast"></div>
+<div class="copysheet" id="copysheet">
+  <div class="copysheet-inner">
+    <p class="copysheet-title">Copy it yourself — we tried, your browser said no.</p>
+    <textarea id="copysheet-text" readonly rows="5"></textarea>
+    <button class="btn ghost" onclick="hideCopySheet()">Done</button>
+  </div>
+</div>
+
+<script>
+/* ================= DATA ================= */
+const SIGNS = [
+  {n:"Aries",g:"♈",d:"Mar 21–Apr 19",el:"fire"},{n:"Taurus",g:"♉",d:"Apr 20–May 20",el:"earth"},
+  {n:"Gemini",g:"♊",d:"May 21–Jun 20",el:"air"},{n:"Cancer",g:"♋",d:"Jun 21–Jul 22",el:"water"},
+  {n:"Leo",g:"♌",d:"Jul 23–Aug 22",el:"fire"},{n:"Virgo",g:"♍",d:"Aug 23–Sep 22",el:"earth"},
+  {n:"Libra",g:"♎",d:"Sep 23–Oct 22",el:"air"},{n:"Scorpio",g:"♏",d:"Oct 23–Nov 21",el:"water"},
+  {n:"Sagittarius",g:"♐",d:"Nov 22–Dec 21",el:"fire"},{n:"Capricorn",g:"♑",d:"Dec 22–Jan 19",el:"earth"},
+  {n:"Aquarius",g:"♒",d:"Jan 20–Feb 18",el:"air"},{n:"Pisces",g:"♓",d:"Feb 19–Mar 20",el:"water"}
+];
+
+const SIGN_TRAITS = {
+  fire:{crave:"momentum and open admiration — they want to feel like the main event, not the afterthought",
+        conflict:"heat that burns fast and clears fast — let them flare, don't let it smolder",
+        love:"bold, visible gestures. Subtlety is wasted on them, and honestly? They know it"},
+  earth:{crave:"consistency they can set a clock by — flakiness is the fastest way to lose them",
+        conflict:"room to cool down before the talk — push too soon and you'll meet the wall",
+        love:"receipts. Showing up beats saying it, every single time"},
+  air:{crave:"conversation that keeps surprising them — bore their mind and you've lost the rest",
+        conflict:"talking it out, ideally tonight — your silence reads as a locked door",
+        love:"words, wit, and the feeling of being mentally undressed"},
+  water:{crave:"emotional safety before anything else — they're reading the room while you're still in the hallway",
+        conflict:"reassurance first, resolution second — fix the feeling before the facts",
+        love:"depth and privacy. The 2am confession means more than the public post"}
+};
+const ELEMENT_PAIR = {
+  "fire-fire":"two open flames — spectacular, a little dangerous, and neither of you brought a fire extinguisher",
+  "fire-air":"air feeds fire — you escalate each other beautifully, in passion and in arguments. Choose wisely which",
+  "fire-earth":"a steady hand meets an open flame — real friction, but when it balances, it *really* balances",
+  "fire-water":"steam — undeniable chemistry with a standing risk that someone ends up doused",
+  "earth-earth":"slow-built and stubborn in the best way — you two don't fall in love, you *construct* it",
+  "earth-air":"grounded meets restless — magic when curiosity is shared, tension when the routines collide",
+  "earth-water":"one of the most naturally nourishing pairings there is — water softens earth, earth holds water",
+  "air-air":"endless conversation, shared freedom, and a genuinely open question about who ever lands the plane",
+  "air-water":"logic meets feeling — the pairing that either grows you both up or wears you both out",
+  "water-water":"deep, intuitive, practically telepathic — but two feelers still need at least one anchor"
+};
+function pairKey(a,b){const o=["fire","earth","air","water"];return o.indexOf(a)<=o.indexOf(b)?a+"-"+b:b+"-"+a}
+
+/* ============ QUESTION BANK (10 Q, weighted; cb = callback line quoted back in the reading) ============ */
+const QUESTIONS = [
+ {q:"Something's been bothering you in the relationship. You usually…",
+  o:[["Bring it up right away, plainly",{con:{direct:2}},"You bring it up right away — no marinating, no mystery."],
+     ["Wait for the right calm moment",{con:{collab:2},att:{secure:1}},"You wait for the calm moment — a strategist, even in feelings."],
+     ["Let it go — most things resolve themselves",{con:{avoidant:2},att:{avoidant:1}},"You let things go and trust time to do the talking."],
+     ["Go quiet and hope they notice",{con:{accommodating:2},att:{anxious:1}},"You go quiet and hope they notice. (They usually don't. Say the thing.)"]]},
+ {q:"Your favorite version of a great night together is…",
+  o:[["Deep conversation that goes til 2am",{love:{words:2}},"Your perfect night is a conversation that forgets what time it is."],
+     ["Doing absolutely nothing, together",{love:{time:2}},"Your perfect night is doing nothing — together. That 'together' is the whole point."],
+     ["Them handling something so you can exhale",{love:{acts:2}},"Your idea of romance is someone quietly handling it so you can exhale."],
+     ["Close, physical, no phones in sight",{love:{touch:2}},"Your perfect night: close, physical, phones face-down and forgotten."]]},
+ {q:"They haven't texted back in a few hours. Honestly, you…",
+  o:[["Don't clock it — they're busy, so are you",{att:{secure:2}},"A slow reply doesn't rattle you — busy is just busy."],
+     ["Notice, and start rereading your last message",{att:{anxious:2}},"You're the one who rereads the last text. We saw that."],
+     ["Feel a little relieved to have space",{att:{avoidant:2}},"A quiet phone feels like room to breathe — you said it yourself."],
+     ["Send a casual follow-up to check the vibe",{att:{anxious:1},con:{direct:1}},"You send the casual follow-up — 'casual.' Sure."]]},
+ {q:"You feel most loved when your person…",
+  o:[["Tells you exactly what you mean to them",{love:{words:2}},null],
+     ["Clears their schedule just to be with you",{love:{time:2}},null],
+     ["Notices what you need before you ask",{love:{acts:2}},null],
+     ["Reaches for you — a hand, a pull-in, a hold",{love:{touch:2}},null]]},
+ {q:"Mid-argument, your instinct is to…",
+  o:[["Say the hard thing now — clear air is worth it",{con:{direct:2}},"Mid-argument, you say the hard thing out loud. Respect."],
+     ["Find the compromise before it escalates",{con:{collab:2}},"You hunt for the compromise before things escalate — built-in diplomacy."],
+     ["Shut down — you'll talk when you're ready",{con:{avoidant:2},att:{avoidant:1}},"You shut down first and talk when YOU'RE ready — on your clock, always."],
+     ["Smooth it over, even if you're still hurt",{con:{accommodating:2},att:{anxious:1}},"You smooth it over while still hurting. We're keeping an eye on that one."]]},
+ {q:"Being fully known by someone feels…",
+  o:[["Like the whole point",{att:{secure:2}},"Being fully known, to you, is the whole point. That's rarer than it sounds."],
+     ["Amazing — and a little terrifying to lose",{att:{anxious:2}},"Being fully known thrills you — and quietly terrifies you to lose."],
+     ["Good in doses; you keep a room to yourself",{att:{avoidant:2}},"You keep a room to yourself, even in love. The right one knocks."],
+     ["Like something you're still learning to allow",{att:{anxious:1,avoidant:1}},"Being fully known is something you're still learning to allow. Honest answer. Good sign."]]},
+ {q:"A gift from a partner lands best when it's…",
+  o:[["Proof they listen — the specific thing you mentioned once",{love:{gifts:2}},"For you, the perfect gift is proof of listening — the thing you mentioned once, weeks ago."],
+     ["Time, not things — an experience together",{love:{time:2}},null],
+     ["Practical — they solved something for you",{love:{acts:2}},null],
+     ["Honestly, you'd trade every gift for a real love letter",{love:{words:2}},"You'd trade every gift for one real love letter. Noted, and honestly? Devastating."]]},
+ {q:"When your person is upset with you, you first need to know…",
+  o:[["Exactly what happened, plainly",{con:{direct:2},att:{secure:1}},null],
+     ["That you two are still okay",{att:{anxious:2}},"When they're upset, your first need is knowing you two are still okay. Everything else can wait."],
+     ["That you can take a breath before diving in",{att:{avoidant:1},con:{avoidant:1}},null],
+     ["What they need from you to fix it",{con:{accommodating:1},love:{acts:1}},null]]},
+ {q:"Affection in public — your comfort level is…",
+  o:[["Full send. Hold my hand, kiss me at the bar",{love:{touch:2}},"Public affection? Full send, your words. Kiss at the bar and all."],
+     ["Warm but subtle — a hand at the back says enough",{love:{touch:1},att:{secure:1}},null],
+     ["Prefer to keep it private; it's ours",{att:{avoidant:1}},"You keep affection private — 'it's ours.' A vault, romantically speaking."],
+     ["Depends entirely on how secure things feel that day",{att:{anxious:2}},"Your PDA meter runs on how secure things feel that day. That's data, not a flaw."]]},
+ {q:"The relationship habit you secretly value most:",
+  o:[["Debriefing the whole day together",{love:{words:1,time:1}},"Your secret favorite ritual: the nightly debrief. The day isn't over until it's told."],
+     ["Rituals — same coffee order, same Sunday",{love:{time:1},att:{secure:1}},"Same coffee order, same Sunday — you fall in love through rituals."],
+     ["Each doing your own thing, then coming home",{att:{avoidant:1,secure:1}},"Your ideal: separate orbits, shared home. Independence as a love language."],
+     ["Constant little check-ins throughout the day",{att:{anxious:1},love:{words:1}},"The all-day check-in texts? That's your heartbeat made visible."]]}
+];
+
+/* ============ RESULT COPY — playful-flirty, wise underneath ============ */
+const ATT_COPY = {
+  secure:["Steady flame","You love hard without gripping hard — rare, and don't think people haven't noticed. You're the one everyone else calibrates to, the person who makes 'we're fine' actually mean fine."],
+  anxious:["Open flame","You love out loud and feel everything in HD. Your radar for the slightest shift in closeness is exquisitely tuned — occasionally a notch past what's actually happening, but hey, at least you'll never be accused of not paying attention."],
+  avoidant:["Banked ember","You run warm but guarded — closeness on your terms, on your timeline. That room you keep to yourself isn't coldness. It's the pilot light. The right person learns to knock, not barge."]
+};
+const LOVE_COPY = {
+  words:"You fall for the person who says it out loud. Texts that end in a period? You noticed. You always notice. For you, love unspoken is love unfinished.",
+  time:"Presence is your whole currency. You'd trade every grand gesture for one afternoon of someone's undivided attention — phone face-down, nowhere else to be.",
+  acts:"You read love in behavior, not speeches. The noticing, the handling, the quiet showing up — that's the love letter. Talk is nice; done is better.",
+  touch:"You're wired for closeness you can feel. A hand finding yours under the table says more to you than a paragraph ever could. Warmth is the language; everything else is subtitles.",
+  gifts:"You feel loved through proof-of-listening — the exact thing you mentioned once, in passing, three weeks ago. It was never about the price tag. It's that they kept the receipt of the conversation."
+};
+const CON_COPY = {
+  direct:"In a fight, you walk toward the fire. You'd rather have one hard conversation than a month of quiet resentment — and honestly, you're right.",
+  collab:"In conflict you're the bridge-builder — instinctively hunting for the version where nobody loses. It's a gift. Just make sure 'nobody loses' includes you.",
+  avoidant:"In conflict you pull back first — you process alone before you can process together. Not everyone gets that. The right one will.",
+  accommodating:"You give ground to keep the peace — generous, warm, and worth watching. Peace you paid for with swallowed hurt isn't peace. It's an invoice with a due date."
+};
+const DYNAMIC_COPY = {
+  secure:"Here's your superpower: steadiness makes people braver. Partners open up faster next to someone who isn't keeping score — and they rarely realize you're the reason.",
+  anxious:"One thing worth saying to them out loud: your reassurance-seeking is love, not doubt. Most partners can't tell the difference until you translate. Translate.",
+  avoidant:"Fair warning: they're probably wondering where they stand more than they let on. You already feel the warm thing — try narrating it occasionally. Small words, big unlock."
+};
+
+/* blended attachment labels + copy, used when the top two scores are close */
+const ATT_BLEND = {
+  "secure-anxious":["Steady flame, anxious flicker","Mostly steady — but when it matters, your radar switches to high alert. You hold the line and check it twice."],
+  "secure-avoidant":["Steady flame, guarded edges","Grounded and calm, with a door you keep politely closed. Not everyone gets the full tour, and that's a feature."],
+  "anxious-avoidant":["Push-pull flame","You want closeness AND the exit row. Reaching in, pulling back — the honest name for it is 'still deciding how safe this is.' Fair."],
+  "anxious-secure":["Open flame, learning steady","You feel everything loudly, but there's real ground under it. The alarm goes off; increasingly, you check before you run."],
+  "avoidant-secure":["Banked ember, warm core","Self-contained on the surface, surprisingly solid underneath. You don't need much — but what you give, you mean."],
+  "avoidant-anxious":["Push-pull flame","Space when they're close, longing when they're far. The distance isn't indifference — it's a thermostat you're still calibrating."]
+};
+const CON_BLEND = {
+  "direct-collab":"You say the hard thing, but you say it building toward a fix — a rare combo of blunt and constructive.",
+  "collab-direct":"Diplomat first, but you won't bury the truth to keep the peace. The compromise has to be real.",
+  "avoidant-accommodating":"You retreat AND you appease — which means resentment has two places to hide. Watch both doors.",
+  "accommodating-avoidant":"You retreat AND you appease — which means resentment has two places to hide. Watch both doors.",
+  "direct-avoidant":"You either say it immediately or not at all — no middle gear. Your partner learns to read which mode arrived.",
+  "avoidant-direct":"You either say it immediately or not at all — no middle gear. Your partner learns to read which mode arrived."
+};
+
+/* your element shades your own reading (zodiac as the lens on YOU) */
+const ELEMENT_FLAVOR = {
+  fire:(sign)=>`And it all runs at ${sign} voltage — whatever you feel, you feel it at full brightness, and the room usually knows.`,
+  earth:(sign)=>`All of it delivered ${sign}-style: quietly, consistently, and with receipts. You don't perform your feelings — you build with them.`,
+  air:(sign)=>`Filtered through that ${sign} mind, of course — you feel it, then you *narrate* it. Everything gets thought about twice and said beautifully once.`,
+  water:(sign)=>`And being a ${sign}, all of it runs deep — you don't just have feelings, you have a whole underwater weather system. The surface rarely tells the full story.`
+};
+
+/* cross-reflection: your profile collided with their sign's tendencies */
+const EL_LOVE_DEFAULT={fire:"touch",earth:"acts",air:"words",water:"time"};
+const EL_CON_NEED={fire:"heat that clears fast — let them flare, don't smolder",earth:"cool-down room before the talk",air:"talking it out tonight, not tomorrow",water:"reassurance before resolution"};
+/* flirty-wise closer per section */
+const KICKERS = {
+  you:["Self-awareness is the most underrated flirt.","Know thyself — it saves everyone a lot of decoding.","You just handed yourself the cheat codes."],
+  them:["Chemistry starts the fire. This is how you keep the house.","Knowing what they crave before they say it? That's the whole game.","Consider this a head start most people never get."]
+};
+
+/* ================= STATE ================= */
+let userSign=null, partnerSign=null, pickingPartner=false, qi=0, sigAnswers=[];
+let S={att:{secure:0,anxious:0,avoidant:0},love:{words:0,time:0,acts:0,touch:0,gifts:0},con:{direct:0,collab:0,avoidant:0,accommodating:0}};
+
+/* ================= FLOW ================= */
+function go(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');window.scrollTo(0,0)}
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2400)}
+
+/* clipboard with layered fallbacks: async API → execCommand → manual copy sheet */
+function copyText(txt,okMsg){
+  const legacy=()=>{
+    try{
+      const ta=document.createElement('textarea');
+      ta.value=txt;ta.style.position='fixed';ta.style.opacity='0';
+      document.body.appendChild(ta);ta.focus();ta.select();
+      const ok=document.execCommand('copy');
+      document.body.removeChild(ta);
+      if(ok){toast(okMsg)}else{showCopySheet(txt)}
+    }catch(e){showCopySheet(txt)}
+  };
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(txt).then(()=>toast(okMsg)).catch(legacy);
+  }else{legacy()}
+}
+function showCopySheet(txt){
+  document.getElementById('copysheet-text').value=txt;
+  document.getElementById('copysheet').classList.add('show');
+  const ta=document.getElementById('copysheet-text');ta.focus();ta.select();
+}
+function hideCopySheet(){document.getElementById('copysheet').classList.remove('show')}
+
+function buildSigns(){
+  const g=document.getElementById('sign-grid');g.innerHTML='';
+  SIGNS.forEach(s=>{
+    const b=document.createElement('button');b.className='sign';
+    b.innerHTML=`<span class="glyph">${s.g}</span><span class="nm">${s.n}</span><br><span class="dt">${s.d}</span>`;
+    b.onclick=()=>pickSign(s,b);g.appendChild(b);
+  });
+}
+function pickSign(s,btn){
+  document.querySelectorAll('.sign').forEach(x=>x.classList.remove('sel'));btn.classList.add('sel');
+  setTimeout(()=>{
+    if(!pickingPartner){
+      userSign=s;pickingPartner=true;
+      document.getElementById('step-glyph').textContent=s.g;
+      document.getElementById('step-name').textContent=s.n;
+      document.getElementById('step-desc').textContent=SIGN_DESC[s.n];
+      go('s-step');
+    }else{
+      partnerSign=s;
+      document.getElementById('step2-glyph').textContent=s.g;
+      document.getElementById('step2-react').textContent=REACTS[pairKey(userSign.el,s.el)];
+      document.getElementById('step2-desc').textContent=SIGN_DESC[s.n];
+      document.getElementById('step2-next').textContent="Ten questions. Two minutes. Zero mercy.";
+      go('s-step2');
+    }
+  },260);
+}
+function toPartnerPick(){
+  const scr=document.getElementById('s-signs');
+  scr.classList.remove('picking-you');scr.classList.add('picking-them');
+  document.getElementById('sign-eyebrow').textContent="Step 2 of 2 · Them";
+  document.getElementById('sign-title').textContent="And the person on your mind?";
+  document.getElementById('sign-sub').textContent="Partner, situationship, the one you keep almost-texting. We don't judge.";
+  document.querySelectorAll('.sign').forEach(x=>x.classList.remove('sel'));
+  go('s-signs');
+}
+/* per-sign flirty blurbs (used for both You and Them interstitials) */
+const SIGN_DESC={
+  Aries:"First in line, first to fall, first to say it out loud. Aries doesn't do slow — they do NOW, with feeling.",
+  Taurus:"Stubborn? Sure. But nobody loves more luxuriously — good food, soft blankets, and loyalty that doesn't blink.",
+  Gemini:"Two moods, one heartbeat, endless conversation. Bore a Gemini and they're gone; fascinate them and they're yours.",
+  Cancer:"The softest armor in the zodiac. Cancer remembers everything you said and exactly how you said it.",
+  Leo:"Warm, radiant, and fully aware of it. Leo doesn't want your attention — they want your *devotion*. And they earn it.",
+  Virgo:"Notices everything, says a fraction of it. Virgo's love language is fixing your life before you knew it was broken.",
+  Libra:"Charm with a spine of steel. Libra will weigh every option — and still pick the beautiful one.",
+  Scorpio:"Intense, private, all-or-nothing. Scorpio already knows your secrets. They're waiting to see if you'll tell them anyway.",
+  Sagittarius:"Half philosopher, half flight risk. Catch a Sag's curiosity and the adventure never ends.",
+  Capricorn:"Ambition in a tailored coat. Capricorn plays the long game in everything — including you.",
+  Aquarius:"Loves humanity, confuses individuals. Crack an Aquarius open and you'll find the loyalist of the whole zodiac.",
+  Pisces:"Feels your mood before you text it. Pisces doesn't fall in love — they dissolve into it."
+};
+const REACTS={
+  "fire-fire":"Two flames? Bold. Someone hide the matches.",
+  "fire-air":"Oh, this pairing has *momentum*. Buckle up.",
+  "fire-earth":"Fire and earth. Opposites? Sure. Boring? Never.",
+  "fire-water":"Steam. Immediate steam. Interesting choice…",
+  "earth-earth":"Two earth signs. Slow burn — the dangerous kind.",
+  "earth-air":"Grounded meets restless. Okay, we're intrigued.",
+  "earth-water":"Ooh — this combination has a *reputation*.",
+  "air-air":"Two air signs? The conversation alone… whew.",
+  "air-water":"Head meets heart. This is going to be good.",
+  "water-water":"Two water signs. Say less. We already feel it."
+};
+function startQuiz(){qi=0;sigAnswers=[];S={att:{secure:0,anxious:0,avoidant:0},love:{words:0,time:0,acts:0,touch:0,gifts:0},con:{direct:0,collab:0,avoidant:0,accommodating:0}};go('s-quiz');renderQ()}
+function renderQ(){
+  const q=QUESTIONS[qi];
+  document.getElementById('pbar').style.width=((qi)/QUESTIONS.length*100)+'%';
+  document.getElementById('qcount').textContent=`Question ${qi+1} of ${QUESTIONS.length}`;
+  document.getElementById('qtext').textContent=q.q;
+  const box=document.getElementById('opts');box.innerHTML='';
+  q.o.forEach(([label,w,cb])=>{
+    const b=document.createElement('button');b.className='opt';b.textContent=label;
+    b.onclick=()=>{applyWeights(w);if(cb)sigAnswers.push(cb);qi++;qi<QUESTIONS.length?renderQ():ignite()};
+    box.appendChild(b);
+  });
+}
+function applyWeights(w){for(const dim in w){if(!S[dim])continue;for(const k in w[dim]){S[dim][k]+=w[dim][k]}}}
+function topKey(obj){return Object.entries(obj).sort((a,b)=>b[1]-a[1])[0][0]}
+function topTwo(obj){const e=Object.entries(obj).sort((a,b)=>b[1]-a[1]);return {k1:e[0][0],v1:e[0][1],k2:e[1][0],v2:e[1][1],blended:(e[0][1]-e[1][1]<=1)&&e[1][1]>0}}
+
+function ignite(){
+  go('s-ignite');
+  document.getElementById('orbA').textContent=userSign.g;
+  document.getElementById('orbB').textContent=partnerSign.g;
+  const orbit=document.getElementById('orbit');orbit.classList.remove('lit');
+  requestAnimationFrame(()=>requestAnimationFrame(()=>orbit.classList.add('lit')));
+  const msgs=["Reading your spark…","Weighing both signs…","Tracing the dynamic…"];let i=0;
+  const t=setInterval(()=>{i++;if(i<msgs.length)document.getElementById('igtext').textContent=msgs[i]},800);
+  setTimeout(()=>{clearInterval(t);renderResult();go('s-result')},2600);
+}
+
+/* ================= SOLO RESULT ================= */
+function pairlineHTML(){return `<span class="you-g">${userSign.g} ${userSign.n}</span> &nbsp;×&nbsp; <span class="them-g">${partnerSign.n} ${partnerSign.g}</span>`}
+function pick(arr){return arr[(SIGNS.findIndex(x=>x.n===userSign.n))%arr.length]}
+
+function renderResult(){
+  const att=topTwo(S.att),love=topTwo(S.love),con=topTwo(S.con);
+  document.getElementById('pairline').innerHTML=pairlineHTML();
+  renderScore(att.k1,con.k1);
+
+  /* --- labels: blended when the race is close --- */
+  const attBlend=att.blended&&ATT_BLEND[att.k1+"-"+att.k2];
+  const attLabel=attBlend?attBlend[0]:ATT_COPY[att.k1][0];
+  const attBody=attBlend?attBlend[1]:ATT_COPY[att.k1][1];
+  const loveLabel=love.blended?`${cap(love.k1)} + ${love.k2} hybrid`:`${cap(love.k1)} first`;
+  const conBlendLine=con.blended&&CON_BLEND[con.k1+"-"+con.k2];
+
+  const chips=document.getElementById('you-chips');
+  chips.innerHTML=`<span class="chip">${attLabel}</span><span class="chip">${loveLabel}</span><span class="chip">${cap(con.k1)} in conflict</span>`;
+
+  /* --- Section A: a woven portrait, not a checklist ---
+     Structure: (1) who you are — attachment fused with sign energy,
+     (2) how you love — love language with ONE answer callback woven in naturally,
+     (3) how you fight + what your sign does with all of it. */
+  const loveLine=love.blended
+    ? `${LOVE_COPY[love.k1]} Though it's close — ${love.k2} runs right behind it. You're bilingual in love, which is either efficient or exhausting. Probably both.`
+    : LOVE_COPY[love.k1];
+  const conLine=conBlendLine||CON_COPY[con.k1];
+  /* fuse sign + attachment in the opener */
+  const SIGN_ATT_BRIDGE={
+    fire:{secure:`a ${userSign.n} with actual ground under all that fire — the rarest kind`,anxious:`a ${userSign.n}, so even your worrying burns bright`,avoidant:`a ${userSign.n} who guards the flame instead of flaunting it — interesting`},
+    earth:{secure:`textbook ${userSign.n}: solid, and solidly loved for it`,anxious:`a ${userSign.n} with a restless current under the calm surface — people miss it, we didn't`,avoidant:`a ${userSign.n} doing what ${userSign.n}s do — building walls with excellent craftsmanship`},
+    air:{secure:`a ${userSign.n} who actually landed the plane — impressive`,anxious:`a ${userSign.n}, which means your worries come fully narrated`,avoidant:`a ${userSign.n} who keeps love at conversational distance — close enough to be brilliant, far enough to be safe`},
+    water:{secure:`a ${userSign.n} with depth AND stability — an anchored ocean`,anxious:`a ${userSign.n}, so the feelings were never going to be small`,avoidant:`a ${userSign.n} in a diving bell — deep waters, sealed hatch`}
+  };
+  const bridge=SIGN_ATT_BRIDGE[userSign.el][att.k1];
+  /* weave one signature answer into the love paragraph, if we caught one */
+  const cb=sigAnswers.length?` ${sigAnswers[0]}`:"";
+
+  document.getElementById('you-body').innerHTML=
+    `<p><strong>${attLabel}.</strong> ${attBody} And you're ${bridge}.</p>
+     <p>${loveLine}${cb}</p>
+     <p>${conLine} ${ELEMENT_FLAVOR[userSign.el](userSign.n)}</p>
+     <p class="kicker">${pick(KICKERS.you)}</p>`;
+
+  /* --- Section B: their sign tendencies + TRUE cross-reflection with your actual answers --- */
+  const pt=SIGN_TRAITS[partnerSign.el];
+  const pair=ELEMENT_PAIR[pairKey(userSign.el,partnerSign.el)];
+  const theirLove=EL_LOVE_DEFAULT[partnerSign.el];
+  const loveCross = love.k1===theirLove
+    ? `Here's the good news: you crave <strong>${LOVE_LABEL[love.k1].toLowerCase()}</strong> — and that's exactly the language ${partnerSign.n}s tend to speak natively. Affection should land with almost no translation loss.`
+    : `Now the interesting part: you told us you're fed by <strong>${LOVE_LABEL[love.k1].toLowerCase()}</strong>, but ${partnerSign.n}s tend to show love through <strong>${LOVE_LABEL[theirLove].toLowerCase()}</strong>. That's not incompatibility — it's a translation gap. Learn to read their dialect and teach them yours; that's the whole assignment.`;
+  const conCross = `And given how you fight — ${con.k1==='direct'?'straight at it':con.k1==='collab'?'building toward the fix':con.k1==='avoidant'?'retreating first':'smoothing it over'} — know that their sign usually needs <strong>${EL_CON_NEED[partnerSign.el]}</strong>. ${
+    (con.k1==='direct'&&partnerSign.el==='earth')?'Your "let\'s talk NOW" will hit their "not yet" wall — give it an hour and you\'ll get a real conversation instead of a standoff.':
+    (con.k1==='avoidant'&&partnerSign.el==='air')?'Your silence will read to them as a locked door. Leave a note on it — even "later, I promise" counts.':
+    (con.k1==='avoidant'&&partnerSign.el==='fire')?'Your retreat may make their flare burn hotter before it clears. A time-stamp ("we\'ll talk at 8") keeps the fire contained.':
+    (con.k1==='accommodating'&&partnerSign.el==='water')?'Careful: you\'ll both prioritize the feeling over the fix — sweet, until nothing ever actually gets resolved.':
+    (con.k1==='direct'&&partnerSign.el==='water')?'Lead with the reassurance before the facts — "we\'re fine, AND we need to talk" changes everything for them.':
+    'Play to that and most fights shrink before they start.'}`;
+
+  document.getElementById('them-body').innerHTML=
+    `<p>As a ${partnerSign.n}, they tend to crave <strong>${pt.crave}</strong>.</p>
+     <p>${loveCross}</p>
+     <p>${conCross}</p>
+     <p>Between your elements, this reads as <strong>${pair}</strong>.</p>
+     <p>${DYNAMIC_COPY[att.k1]}</p>
+     <p class="kicker">${pick(KICKERS.them)}</p>`;
+}
+function cap(s){return s.charAt(0).toUpperCase()+s.slice(1)}
+
+/* ================= SPARK SCORE ================= */
+const PAIR_BASE={"fire-fire":78,"fire-air":86,"fire-earth":62,"fire-water":68,"earth-earth":74,"earth-air":60,"earth-water":88,"air-air":80,"air-water":66,"water-water":76};
+let sparkScore=0;
+function computeScore(att,con){
+  let s=PAIR_BASE[pairKey(userSign.el,partnerSign.el)];
+  if(att==='secure')s+=6; if(att==='anxious')s-=2; if(att==='avoidant')s-=3;
+  if(con==='collab')s+=5; if(con==='direct')s+=2; if(con==='avoidant')s-=4; if(con==='accommodating')s-=1;
+  s+=((SIGNS.findIndex(x=>x.n===userSign.n)+SIGNS.findIndex(x=>x.n===partnerSign.n))%5)-2;
+  return Math.max(38,Math.min(97,s));
+}
+function renderScore(att,con){
+  sparkScore=computeScore(att,con);
+  const ring=document.getElementById('score-ring'),num=document.getElementById('score-num');
+  const tease=document.getElementById('score-tease');
+  tease.textContent=sparkScore>=80?"High heat. The full story of why? That's written on their side of the read.":
+    sparkScore>=65?"Real potential, real friction — the interesting half of this number is theirs to unlock.":
+    "Challenging on paper — which is exactly when the real comparison gets juicy.";
+  let cur=0;
+  const step=()=>{cur+=Math.max(1,Math.round((sparkScore-cur)/8));if(cur>=sparkScore)cur=sparkScore;
+    num.textContent=cur;ring.style.setProperty('--pct',cur);
+    if(cur<sparkScore)requestAnimationFrame(step)};
+  requestAnimationFrame(step);
+}
+
+/* ================= GUESS MODE ================= */
+const GUESS_QS=[
+ {q:"After a long week, they'd rather…",o:["Go out and be around energy","Stay in, just the two of you","Have space to themselves first","Talk through the whole week"]},
+ {q:"If you two disagreed tonight, they would…",o:["Say it straight, right away","Cool off first, talk later","Smooth it over quickly","Turn it into a long conversation"]},
+ {q:"Their idea of feeling loved is mostly…",o:["Hearing it in words","Your undivided time","Things you do for them","Physical closeness"]}
+];
+let gi=0, guesses=[];
+function startGuess(){gi=0;guesses=[];go('s-guess');renderG()}
+function renderG(){
+  const q=GUESS_QS[gi];
+  document.getElementById('gbar').style.width=(gi/GUESS_QS.length*100)+'%';
+  document.getElementById('gcount').textContent=`Guess ${gi+1} of ${GUESS_QS.length} · How would THEY answer?`;
+  document.getElementById('gtext').textContent=q.q;
+  const box=document.getElementById('gopts');box.innerHTML='';
+  q.o.forEach((label,idx)=>{
+    const b=document.createElement('button');b.className='opt';b.textContent=label;
+    b.onclick=()=>{guesses.push(idx);gi++;gi<GUESS_QS.length?renderG():go('s-sealed')};
+    box.appendChild(b);
+  });
+}
+function copyInvite(){
+  const payload=btoa(JSON.stringify({u:userSign.n,p:partnerSign.n,g:guesses,s:sparkScore}));
+  const link=`https://ignite.app/read?invite=${payload}`;
+  copyText(`I took a Spark Read on us (${userSign.n} × ${partnerSign.n} — we scored ${sparkScore}) and sealed 3 guesses about you. Take yours and unlock them → ${link}`,'Invite copied — send it to them ✨');
+}
+
+/* ================= PAIRED READ (V2 demo) ================= */
+const LOVE_LABEL={words:"Words of affirmation",time:"Quality time",acts:"Acts of care",touch:"Physical touch",gifts:"Thoughtful tokens"};
+const CON_LABEL={direct:"Direct",collab:"Collaborative",avoidant:"Needs space first",accommodating:"Peacekeeper"};
+const ATT_LABEL={secure:"Steady flame",anxious:"Open flame",avoidant:"Banked ember"};
+
+function simPartner(){
+  const idx=SIGNS.findIndex(x=>x.n===partnerSign.n);
+  const atts=["secure","anxious","avoidant"],cons=["direct","collab","avoidant","accommodating"];
+  const elLove={fire:"touch",earth:"acts",air:"words",water:"time"};
+  return {att:atts[idx%3],love:elLove[partnerSign.el],con:cons[(idx+1)%4],answers:[(idx)%4,(idx+2)%4,(idx+1)%4]};
+}
+function previewPaired(){
+  const att=topKey(S.att),love=topKey(S.love),con=topKey(S.con);
+  const P=simPartner();
+  document.getElementById('p-pairline').innerHTML=pairlineHTML();
+
+  /* identity header — who is who, app-wide colors */
+  document.getElementById('duo-head').innerHTML=
+    `<div class="duo-card duo-you"><span class="g">${userSign.g}</span><span class="who">You</span><span class="sn">${userSign.n}</span></div>
+     <div class="duo-card duo-them"><span class="g">${partnerSign.g}</span><span class="who">Them</span><span class="sn">${partnerSign.n}</span></div>`;
+
+  /* true score from both real profiles */
+  let ts=PAIR_BASE[pairKey(userSign.el,partnerSign.el)];
+  if(att==='secure'||P.att==='secure')ts+=5;
+  if((att==='anxious'&&P.att==='avoidant')||(att==='avoidant'&&P.att==='anxious'))ts-=7;
+  if(love===P.love)ts+=6;
+  if(con===P.con)ts+=4;
+  if((con==='avoidant'&&P.con==='direct')||(con==='direct'&&P.con==='avoidant'))ts-=3;
+  ts=Math.max(38,Math.min(97,ts));
+  const delta=ts-sparkScore;
+  document.getElementById('p-delta').textContent=
+    `Your solo read guessed ${sparkScore}. With their real answers: ${ts} — ${delta>=0?'even better than predicted. Called it, kind of.':'the prediction ran a little hot. Reality has notes.'}`;
+  const ring=document.getElementById('p-ring'),num=document.getElementById('p-num');
+  let cur=0;const step=()=>{cur+=Math.max(1,Math.round((ts-cur)/8));if(cur>=ts)cur=ts;num.textContent=cur;ring.style.setProperty('--pct',cur);if(cur<ts)requestAnimationFrame(step)};
+  requestAnimationFrame(step);
+
+  /* guess reveal */
+  const userGuesses = guesses.length===3 ? guesses : [0,1,2];
+  let hits=0;
+  document.getElementById('p-guesses').innerHTML=GUESS_QS.map((g,i)=>{
+    const hit=userGuesses[i]===P.answers[i];if(hit)hits++;
+    return `<div class="guess-card">
+      <div class="guess-q">${g.q}</div>
+      <div class="guess-row you"><span class="who">You guessed</span><span>${g.o[userGuesses[i]]}</span></div>
+      <div class="guess-row them"><span class="who">They said</span><span>${g.o[P.answers[i]]}</span></div>
+      <div class="guess-hit ${hit?'hit':'miss'}">${hit?'✓ You called it':'✕ Missed this one'}</div>
+    </div>`;
+  }).join('')+`<p class="kicker" style="margin-top:14px">${
+    hits===3?"3 for 3. Either you're paying attention or you're in their phone. We'll allow it.":
+    hits===2?"2 out of 3 — you know them better than most people ever bother to.":
+    hits===1?"1 for 3. Good news: the fun part of a relationship is the homework.":
+    "0 for 3. Well. At least now there's a syllabus."}</p>`;
+
+  /* side by side */
+  const row=(l,m,r)=>`<div class="cmp-row"><span class="l">${l}</span><span class="mid">${m}</span><span class="r">${r}</span></div>`;
+  document.getElementById('p-compare').innerHTML=
+    row(ATT_LABEL[att],"Attachment",ATT_LABEL[P.att])+
+    row(LOVE_LABEL[love],"Love language",LOVE_LABEL[P.love])+
+    row(CON_LABEL[con],"In conflict",CON_LABEL[P.con]);
+
+  /* confirmed dynamic */
+  document.getElementById('p-dynamic').innerHTML=
+    `<p>No more guessing: their answers confirm they feel most loved through <strong>${LOVE_LABEL[P.love].toLowerCase()}</strong>${love===P.love?" — the very language you speak natively. That's rarer than you'd think, and yes, you're allowed to be smug about it.":`, while you run on ${LOVE_LABEL[love].toLowerCase()}. Different dialects — both learnable, and learning them is the flirtiest thing you can do.`}</p>
+     <p>In conflict, you're <strong>${CON_LABEL[con].toLowerCase()}</strong> and they're <strong>${CON_LABEL[P.con].toLowerCase()}</strong>${con===P.con?" — matched styles, which means your fights end the way they start: on the same page.":". Knowing this before the next disagreement is half the fight already won."}</p>
+     <p>Between your elements: <strong>${ELEMENT_PAIR[pairKey(userSign.el,partnerSign.el)]}</strong>.</p>`;
+
+  /* click / clash */
+  const click=[],clash=[];
+  if(love===P.love)click.push("Same love language, native fluency — affection lands with zero translation loss.");
+  else click.push(`You each just got the other's user manual: ${LOVE_LABEL[P.love].toLowerCase()} for them, ${LOVE_LABEL[love].toLowerCase()} for you.`);
+  if(att==='secure'||P.att==='secure')click.push("One of you is a steady flame — that anchor quietly steadies the entire dynamic.");
+  if(con===P.con)click.push("Matched conflict styles — your disagreements run on the same clock.");
+  if((att==='anxious'&&P.att==='avoidant')||(att==='avoidant'&&P.att==='anxious'))clash.push("The classic pursue-withdraw loop: one reaches, one retreats. Naming it out loud is genuinely most of the fix.");
+  if((con==='avoidant'&&P.con==='direct')||(con==='direct'&&P.con==='avoidant'))clash.push("One of you wants to talk NOW, one needs air first. Agree on a 'we'll talk at 8' rule and watch the problem shrink.");
+  if(con==='accommodating')clash.push("Your peacekeeping can hide real hurt — they can't fix what you keep smoothing over.");
+  if(clash.length===0)clash.push("No structural friction on the board — your clashes will be situational, not built-in. Lucky you.");
+  document.getElementById('p-clash').innerHTML=
+    `<div class="cc-h click">Where you click</div><ul class="cc-list click">${click.map(c=>`<li>${c}</li>`).join('')}</ul>
+     <div class="cc-h clash">Where you'll clash</div><ul class="cc-list clash">${clash.map(c=>`<li>${c}</li>`).join('')}</ul>`;
+
+  go('s-paired');
+}
+
+/* ================= QUESTION PACKS (premium, demo partner) ================= */
+const PACKS=[
+ {id:"firstfight",emoji:"🔥",name:"First Fight",desc:"How you each argue, apologize, and come back — before you have to learn it the hard way.",
+  qs:[
+   {q:"When an argument's over, it's actually over when…",o:["We've said sorry out loud","We're laughing again","Some time has passed","We've talked through the WHY"]},
+   {q:"The apology that works on you is…",o:["The words, said plainly","Changed behavior, no speech needed","Physical closeness first","A little space, then the talk"]},
+   {q:"Mid-fight, the worst thing they could do is…",o:["Go silent on me","Raise their voice","Bring up old stuff","Walk out of the room"]},
+   {q:"After a fight, you mostly need…",o:["Reassurance we're okay","Time alone to reset","To finish the conversation","Affection, not analysis"]},
+   {q:"Honestly, most of our future fights will be about…",o:["Time and attention","Money and priorities","Family and outside opinions","Nothing real — just stress finding a door"]}]},
+ {id:"longdistance",emoji:"✈️",name:"Long Distance",desc:"Miles apart, still in sync? Find out where the distance actually lives.",
+  qs:[
+   {q:"The call that matters most is…",o:["Good morning","The random midday check-in","The long goodnight one","Video over voice, always"]},
+   {q:"Distance feels hardest when…",o:["Something great happens and they're not there","Something bad happens and they're not there","Weekends","Seeing other couples together"]},
+   {q:"Trust across the miles is built by…",o:["Consistency — same time, every time","Openness — sharing the boring details","Effort — surprise visits and letters","Independence — full lives, shared honestly"]},
+   {q:"A visit is perfect when…",o:["We do absolutely nothing together","We adventure the whole time","We host each other's worlds — friends, places","We don't make plans at all"]},
+   {q:"The countdown between visits should be…",o:["Talked about constantly","Quietly endured","Broken up with milestones","Ignored — live now, not later"]}]},
+ {id:"movingin",emoji:"🔑",name:"Moving In",desc:"One roof, two systems. Compare operating manuals before you merge them.",
+  qs:[
+   {q:"Your non-negotiable at home is…",o:["Quiet mornings","A clean kitchen","My own corner/space","No phones at dinner"]},
+   {q:"Chores work best when…",o:["Split 50/50, on paper","Whoever's better at it does it","Done together, same time","Loose — it evens out"]},
+   {q:"Alone time at home should be…",o:["Scheduled and respected","Rare — we live together to BE together","Read from the room","Separate hobbies, same room"]},
+   {q:"Money under one roof means…",o:["Everything shared","Split down the middle","Proportional to income","One pot for shared, rest private"]},
+   {q:"The first big test will be…",o:["Decorating decisions","Sleep schedules","Guests and hosting","Whose stuff gets donated"]}]}
+];
+let curPack=null,ki=0,kAnswers=[];
+function openPacks(){
+  const list=document.getElementById('pack-list');
+  list.innerHTML=PACKS.map(p=>
+    `<button class="pack-card" onclick="startPack('${p.id}')">
+      <span class="pack-emoji">${p.emoji}</span>
+      <div class="pack-name">${p.name}</div>
+      <div class="pack-desc">${p.desc}</div>
+      <span class="pack-meta">5 questions · both answer · compare</span>
+    </button>`).join('');
+  go('s-packs');
+}
+function startPack(id){curPack=PACKS.find(p=>p.id===id);ki=0;kAnswers=[];go('s-pack');renderK()}
+function renderK(){
+  const q=curPack.qs[ki];
+  document.getElementById('kbar').style.width=(ki/curPack.qs.length*100)+'%';
+  document.getElementById('kcount').textContent=`${curPack.name} · ${ki+1} of ${curPack.qs.length}`;
+  document.getElementById('ktext').textContent=q.q;
+  const box=document.getElementById('kopts');box.innerHTML='';
+  q.o.forEach((label,idx)=>{
+    const b=document.createElement('button');b.className='opt';b.textContent=label;
+    b.onclick=()=>{kAnswers.push(idx);ki++;ki<curPack.qs.length?renderK():packDone()};
+    box.appendChild(b);
+  });
+}
+function packDone(){
+  const pIdx=SIGNS.findIndex(x=>x.n===partnerSign.n);
+  let matches=0;
+  document.getElementById('k-pairline').innerHTML=pairlineHTML();
+  document.getElementById('k-title').textContent=`${curPack.emoji} ${curPack.name} — compared`;
+  document.getElementById('k-compare').innerHTML=curPack.qs.map((q,i)=>{
+    const theirs=(pIdx+i*2)%q.o.length; /* seeded sim */
+    const hit=kAnswers[i]===theirs;if(hit)matches++;
+    return `<div class="k-q">${q.q}</div>
+      <div class="guess-row you"><span class="who">You</span><span>${q.o[kAnswers[i]]}</span></div>
+      <div class="guess-row them"><span class="who">Them</span><span>${q.o[theirs]}</span></div>
+      <div class="k-match ${hit?'hit':'miss'}">${hit?'✓ Same page':'◇ Different pages — talk about this one'}</div>`;
+  }).join('')+`<p class="kicker" style="margin-top:16px">${
+    matches>=4?"Aligned on almost everything. Suspiciously easy. Enjoy it.":
+    matches>=2?`Matched on ${matches} of 5 — the other ${5-matches} aren't problems, they're this week's conversations.`:
+    "Barely a match in sight — congratulations, you two will never run out of things to negotiate. That's called chemistry with homework."}</p>`;
+  go('s-packdone');
+}
+
+/* ================= SHARE / RESTART ================= */
+function shareResult(){
+  const att=topTwo(S.att),love=topTwo(S.love),con=topTwo(S.con);
+  const attBlend=att.blended&&ATT_BLEND[att.k1+"-"+att.k2];
+  const attLabel=attBlend?attBlend[0]:ATT_COPY[att.k1][0];
+  const loveLabel=love.blended?`${cap(love.k1)}+${love.k2}`:`${cap(love.k1)} first`;
+  const txt=`My Ignite Spark Read ✨\n${userSign.n} × ${partnerSign.n} — Spark Score ${sparkScore}\nMe: ${attLabel} · ${loveLabel} · ${cap(con.k1)} in conflict\nThem: a ${partnerSign.n} who tends to crave ${SIGN_TRAITS[partnerSign.el].crave.split(' — ')[0]}.\nGet your own read → ignite.app`;
+  copyText(txt,'Copied — paste it anywhere ✨');
+}
+function restart(){
+  userSign=null;partnerSign=null;pickingPartner=false;
+  qi=0;sigAnswers=[];guesses=[];gi=0;sparkScore=0;curPack=null;ki=0;kAnswers=[];
+  const scr=document.getElementById('s-signs');
+  scr.classList.add('picking-you');scr.classList.remove('picking-them');
+  document.getElementById('sign-eyebrow').textContent="Step 1 of 2 · You";
+  document.getElementById('sign-title').textContent="First things first — what's your sign?";
+  document.getElementById('sign-sub').textContent="Sun sign is all we need. We're quick like that.";
+  buildSigns();go('s-landing');
+}
+buildSigns();
+</script>
+</body>
+</html>

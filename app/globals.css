@@ -1,0 +1,169 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* palette */
+  --night: #1a0f1e;
+  --night-2: #241428;
+  --card: #2b1830;
+  --ember-1: #ff6b4a;
+  --ember-2: #ffb347;
+  --rose: #e8a0b4;
+  --rose-deep: #d97a96;
+  --ivory: #f5ede6;
+  --ivory-dim: rgba(245, 237, 230, 0.64);
+  --line: rgba(232, 160, 180, 0.16);
+  /* identity: You = ember, Them = rose (app-wide) */
+  --you: var(--ember-1);
+  --them: var(--rose-deep);
+  /* type scale */
+  --fs-hero: clamp(2.5rem, 9vw, 3.4rem);
+  --fs-title: 1.9rem;
+  --fs-question: 1.6rem;
+  --fs-section: 1.32rem;
+  --fs-body: 0.95rem;
+  --fs-meta: 0.8rem;
+  --fs-label: 0.68rem;
+  /* rhythm */
+  --sp-1: 8px;
+  --sp-2: 14px;
+  --sp-3: 22px;
+  --sp-4: 32px;
+  --sp-5: 48px;
+  --radius: 20px;
+  --radius-sm: 14px;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  font-family: var(--font-outfit), "Outfit", sans-serif;
+  background: var(--night);
+  color: var(--ivory);
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background: radial-gradient(60% 40% at 80% -5%, rgba(255, 107, 74, 0.13), transparent 70%),
+    radial-gradient(50% 35% at 10% 105%, rgba(255, 179, 71, 0.09), transparent 70%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001s !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001s !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+.font-serif em,
+.brand-em {
+  font-style: italic;
+  background: linear-gradient(90deg, var(--ember-1), var(--ember-2));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* ---------- score ring (conic-gradient count-up) ---------- */
+.score-ring {
+  width: 158px;
+  height: 158px;
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  background: radial-gradient(closest-side, var(--night) 88%, transparent 89% 100%),
+    conic-gradient(var(--ember-1) 0deg, var(--ember-2) calc(var(--pct, 0) * 3.6deg), var(--night-2) 0deg);
+}
+.score-num {
+  font-family: var(--font-instrument-serif), serif;
+  font-size: 3.4rem;
+  font-weight: 400;
+  line-height: 1;
+  background: linear-gradient(90deg, var(--ember-1), var(--ember-2));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* ---------- ignition orbit ---------- */
+.orbit {
+  position: relative;
+  width: 220px;
+  height: 120px;
+}
+.orb-glyph {
+  position: absolute;
+  top: 50%;
+  font-family: var(--font-instrument-serif), serif;
+  font-size: 3.2rem;
+  transform: translateY(-50%);
+  transition: left 1.6s cubic-bezier(0.6, 0, 0.3, 1), right 1.6s cubic-bezier(0.6, 0, 0.3, 1);
+}
+.orb-a {
+  left: 0;
+  color: var(--you);
+}
+.orb-b {
+  right: 0;
+  color: var(--them);
+}
+.orbit.lit .orb-a {
+  left: calc(50% - 42px);
+}
+.orbit.lit .orb-b {
+  right: calc(50% - 42px);
+}
+.flare {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  opacity: 0;
+  background: radial-gradient(circle, var(--ember-2), var(--ember-1) 55%, transparent 75%);
+}
+.orbit.lit .flare {
+  animation: flare 1s 0.9s ease-out forwards;
+}
+
+/* ---------- glyph glow (sign step transitions) ---------- */
+.step-glyph {
+  font-family: var(--font-instrument-serif), serif;
+  font-size: 4.2rem;
+  line-height: 1;
+  animation: glyphIn 1s cubic-bezier(0.25, 0.8, 0.3, 1) both;
+}
+.step-glyph.you {
+  color: var(--you);
+  text-shadow: 0 0 34px rgba(255, 107, 74, 0.5);
+}
+.step-glyph.them {
+  color: var(--them);
+  text-shadow: 0 0 34px rgba(217, 122, 150, 0.5);
+}
