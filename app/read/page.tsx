@@ -34,7 +34,7 @@ export default function ReadInvitePage({ searchParams }: { searchParams: { invit
       <div className="flex flex-1 flex-col items-center justify-center gap-[18px] text-center">
         {invite ? (
           <>
-            <div className="text-[3rem]">🔒</div>
+            <div className="text-[3.4rem]">🔒</div>
             <h1 className="font-serif text-title font-normal leading-[1.18]">
               {article(invite.u)} {invite.u} took a Spark Read on you.
             </h1>
@@ -46,7 +46,7 @@ export default function ReadInvitePage({ searchParams }: { searchParams: { invit
           </>
         ) : (
           <>
-            <div className="text-[3rem]">✨</div>
+            <div className="text-[3.4rem]">✨</div>
             <h1 className="font-serif text-title font-normal leading-[1.18]">This invite link isn&rsquo;t valid.</h1>
             <p className="mb-0 max-w-[32ch] text-body text-ivory-dim">
               It may be incomplete or expired. Start your own Spark Read instead.

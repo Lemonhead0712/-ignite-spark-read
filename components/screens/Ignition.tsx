@@ -33,7 +33,7 @@ export function Ignition({ userSign, partnerSign, onComplete }: { userSign: Sign
         <span className="orb-glyph orb-b">{partnerSign.g}</span>
         <span className="flare" />
       </div>
-      <div className="font-serif text-[1.3rem] italic text-ivory-dim">{MESSAGES[msgIndex]}</div>
+      <div className="font-serif text-[1.42rem] italic text-ivory-dim">{MESSAGES[msgIndex]}</div>
     </section>
   );
 }

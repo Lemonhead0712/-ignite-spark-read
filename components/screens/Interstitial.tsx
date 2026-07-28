@@ -24,11 +24,11 @@ export function Interstitial(props: Step1Props | Step2Props) {
         <span className={`step-glyph ${isStep2 ? "them" : "you"}`}>{props.sign.g}</span>
 
         {isStep2 ? (
-          <div className="animate-softUp font-serif text-[1.35rem] italic">
+          <div className="animate-softUp font-serif text-[1.48rem] italic">
             {REACTS[pairKey((props as Step2Props).userElement, props.sign.el)]}
           </div>
         ) : (
-          <div className="animate-softUp font-serif text-[1.35rem]">
+          <div className="animate-softUp font-serif text-[1.48rem]">
             <span style={{ color: "var(--you)" }}>{props.sign.n}</span> — noted.
           </div>
         )}

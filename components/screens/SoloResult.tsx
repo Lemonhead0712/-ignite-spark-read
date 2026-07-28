@@ -42,7 +42,7 @@ export function SoloResult({ userSign, partnerSign, result, onRetake, onShare, o
         </span>
         <div className="mb-sp-2 flex flex-wrap gap-2">
           {result.chips.map((chip) => (
-            <span key={chip} className="rounded-full border border-line px-[13px] py-[6px] text-[.74rem] font-medium text-rose">
+            <span key={chip} className="rounded-full border border-line px-[13px] py-[6px] text-[.82rem] font-medium text-rose">
               {chip}
             </span>
           ))}
@@ -51,7 +51,7 @@ export function SoloResult({ userSign, partnerSign, result, onRetake, onShare, o
           {result.sectionA.paragraphs.map((html, i) => (
             <RichText key={i} html={html} />
           ))}
-          <p className="mt-sp-2 border-t border-line pt-sp-2 font-serif italic text-[1.02rem]" style={{ color: "var(--rose)" }}>
+          <p className="mt-sp-2 border-t border-line pt-sp-2 font-serif italic text-[1.1rem]" style={{ color: "var(--rose)" }}>
             {result.sectionA.kicker}
           </p>
         </div>
@@ -71,7 +71,7 @@ export function SoloResult({ userSign, partnerSign, result, onRetake, onShare, o
           {result.sectionB.paragraphs.map((html, i) => (
             <RichText key={i} html={html} />
           ))}
-          <p className="mt-sp-2 border-t border-line pt-sp-2 font-serif italic text-[1.02rem]" style={{ color: "var(--rose)" }}>
+          <p className="mt-sp-2 border-t border-line pt-sp-2 font-serif italic text-[1.1rem]" style={{ color: "var(--rose)" }}>
             {result.sectionB.kicker}
           </p>
         </div>

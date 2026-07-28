@@ -6,7 +6,7 @@ export function Sealed({ onCopyInvite, onBack }: { onCopyInvite: () => void; onB
     <section className="flex flex-1 animate-fadeUp flex-col">
       <TopBar label="← Results" onAction={onBack} />
       <div className="flex flex-1 flex-col items-center justify-center gap-[18px] text-center">
-        <div className="text-[3rem]">🔒</div>
+        <div className="text-[3.4rem]">🔒</div>
         <h2 className="text-center font-serif text-title font-normal leading-[1.18]">Sealed. No takebacks.</h2>
         <p className="mb-0 max-w-[32ch] text-center text-body text-ivory-dim">
           Your guesses are locked into your invite. Send it — when they finish their read, you both find out how well

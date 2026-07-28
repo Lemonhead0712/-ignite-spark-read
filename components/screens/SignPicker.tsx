@@ -40,15 +40,15 @@ export function SignPicker({ variant, onBack, onPick }: SignPickerProps) {
       <TopBar label={copy.backLabel} onAction={onBack} />
       <span className="mb-sp-1 block text-label uppercase tracking-[.24em] text-rose">{copy.eyebrow}</span>
       <h2 className="mb-[6px] font-serif text-title font-normal leading-[1.18]">{copy.title}</h2>
-      <p className="mb-sp-4 text-body text-ivory-dim">{copy.sub}</p>
-      <div className="mb-sp-3 grid grid-cols-3 gap-[10px]">
+      <p className="mb-sp-2 text-body text-ivory-dim">{copy.sub}</p>
+      <div className="mb-sp-2 grid grid-cols-3 gap-[8px]">
         {SIGNS.map((sign) => {
           const isSel = selected === sign.n;
           return (
             <button
               key={sign.n}
               onClick={() => handlePick(sign)}
-              className="cursor-pointer rounded-sm border p-[15px_6px] text-center font-sans text-ivory transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--ember-2)] focus-visible:outline-offset-2"
+              className="cursor-pointer rounded-sm border p-[10px_6px] text-center font-sans text-ivory transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--ember-2)] focus-visible:outline-offset-2"
               style={{
                 borderColor: isSel ? selColor : "var(--line)",
                 background: isSel
@@ -59,14 +59,14 @@ export function SignPicker({ variant, onBack, onPick }: SignPickerProps) {
               }}
             >
               <span
-                className="mb-[5px] block text-[1.5rem]"
+                className="mb-[5px] block text-[1.7rem]"
                 style={{ color: isSel ? (variant === "you" ? "var(--ember-2)" : "var(--rose)") : "var(--rose)" }}
               >
                 {sign.g}
               </span>
-              <span className="text-[.8rem] font-semibold tracking-[.02em]">{sign.n}</span>
+              <span className="text-[.88rem] font-semibold tracking-[.02em]">{sign.n}</span>
               <br />
-              <span className="text-[.64rem] text-ivory-dim">{sign.d}</span>
+              <span className="text-[.7rem] text-ivory-dim">{sign.d}</span>
             </button>
           );
         })}

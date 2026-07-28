@@ -18,13 +18,13 @@
   --you: var(--ember-1);
   --them: var(--rose-deep);
   /* type scale */
-  --fs-hero: clamp(2.5rem, 9vw, 3.4rem);
-  --fs-title: clamp(1.9rem, 1.7rem + 1vw, 2.3rem);
-  --fs-question: clamp(1.6rem, 1.42rem + 0.9vw, 1.9rem);
-  --fs-section: clamp(1.32rem, 1.22rem + 0.5vw, 1.5rem);
-  --fs-body: 0.95rem;
-  --fs-meta: 0.8rem;
-  --fs-label: 0.68rem;
+  --fs-hero: clamp(2.9rem, 10vw, 3.9rem);
+  --fs-title: clamp(2.1rem, 1.85rem + 1.1vw, 2.55rem);
+  --fs-question: clamp(1.76rem, 1.55rem + 1vw, 2.1rem);
+  --fs-section: clamp(1.46rem, 1.34rem + 0.55vw, 1.68rem);
+  --fs-body: 1.04rem;
+  --fs-meta: 0.88rem;
+  --fs-label: 0.75rem;
   /* rhythm */
   --sp-1: 8px;
   --sp-2: 14px;
@@ -98,8 +98,8 @@ body::before {
 
 /* ---------- score ring (conic-gradient count-up) ---------- */
 .score-ring {
-  width: 158px;
-  height: 158px;
+  width: 172px;
+  height: 172px;
   border-radius: 50%;
   display: flex;
   flex-direction: column;
@@ -111,7 +111,7 @@ body::before {
 }
 .score-num {
   font-family: var(--font-instrument-serif), serif;
-  font-size: 3.4rem;
+  font-size: 3.7rem;
   font-weight: 400;
   line-height: 1;
   background: linear-gradient(90deg, var(--ember-1), var(--ember-2));
@@ -130,7 +130,7 @@ body::before {
   position: absolute;
   top: 50%;
   font-family: var(--font-instrument-serif), serif;
-  font-size: 3.2rem;
+  font-size: 3.4rem;
   transform: translateY(-50%);
   transition: left 1.6s cubic-bezier(0.6, 0, 0.3, 1), right 1.6s cubic-bezier(0.6, 0, 0.3, 1);
 }
@@ -166,7 +166,7 @@ body::before {
 /* ---------- glyph glow (sign step transitions) ---------- */
 .step-glyph {
   font-family: var(--font-instrument-serif), serif;
-  font-size: 4.2rem;
+  font-size: 4.5rem;
   line-height: 1;
   animation: glyphIn 1s cubic-bezier(0.25, 0.8, 0.3, 1) both;
 }
