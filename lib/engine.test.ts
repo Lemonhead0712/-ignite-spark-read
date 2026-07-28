@@ -54,6 +54,7 @@ describe("computeSoloResult", () => {
           expect(result.sectionA.paragraphs).toHaveLength(3);
           result.sectionA.paragraphs.forEach((p) => expect(p.length).toBeGreaterThan(0));
           expect(result.sectionA.kicker.length).toBeGreaterThan(0);
+          expect(result.sectionA.paragraphs[0]).not.toMatch(/\ba (Aries|Aquarius)\b/);
 
           expect(result.sectionB.paragraphs).toHaveLength(5);
           result.sectionB.paragraphs.forEach((p) => expect(p.length).toBeGreaterThan(0));
@@ -141,16 +142,32 @@ describe("share and invite text", () => {
   const userSign: Sign = SIGNS.find((s) => s.n === "Aries")!;
   const partnerSign: Sign = SIGNS.find((s) => s.n === "Scorpio")!;
 
-  it("builds non-empty share text referencing both signs and the score", () => {
-    const text = buildShareText(userSign, partnerSign, {
-      score: 72,
-      scoreTease: "Real potential, real friction.",
-      chips: ["Steady flame", "Words first", "Direct in conflict"],
-    });
+  it("builds non-empty share text referencing both signs, the score, and the about-you narrative", () => {
+    const text = buildShareText(
+      userSign,
+      partnerSign,
+      {
+        score: 72,
+        scoreTease: "Real potential, real friction.",
+        chips: ["Steady flame", "Words first", "Direct in conflict"],
+        sectionA: {
+          paragraphs: [
+            "<strong>Steady flame.</strong> You love hard without gripping hard. And you're a bold opener.",
+            "second paragraph",
+            "third paragraph",
+          ],
+          kicker: "kicker",
+        },
+      },
+      "https://sparkread.netlify.app"
+    );
     expect(text).toContain("Aries");
     expect(text).toContain("Scorpio");
     expect(text).toContain("72");
     expect(text).toContain("Steady flame");
+    expect(text).toContain("You love hard without gripping hard. And you're a bold opener.");
+    expect(text).not.toContain("<strong>");
+    expect(text).toContain("https://sparkread.netlify.app");
   });
 
   it("builds an invite message carrying a base64 payload link", () => {

@@ -290,26 +290,30 @@ export const ELEMENT_FLAVOR: Record<Element, (sign: string) => string> = {
   water: (sign) => `And being a ${sign}, all of it runs deep — you don't just have feelings, you have a whole underwater weather system. The surface rarely tells the full story.`,
 };
 
+function indefiniteArticle(word: string): string {
+  return /^[aeiou]/i.test(word) ? "an" : "a";
+}
+
 export const SIGN_ATT_BRIDGE: Record<Element, Record<AttKey, (sign: string) => string>> = {
   fire: {
-    secure: (sign) => `a ${sign} with actual ground under all that fire — the rarest kind`,
-    anxious: (sign) => `a ${sign}, so even your worrying burns bright`,
-    avoidant: (sign) => `a ${sign} who guards the flame instead of flaunting it — interesting`,
+    secure: (sign) => `${indefiniteArticle(sign)} ${sign} with actual ground under all that fire — the rarest kind`,
+    anxious: (sign) => `${indefiniteArticle(sign)} ${sign}, so even your worrying burns bright`,
+    avoidant: (sign) => `${indefiniteArticle(sign)} ${sign} who guards the flame instead of flaunting it — interesting`,
   },
   earth: {
     secure: (sign) => `textbook ${sign}: solid, and solidly loved for it`,
-    anxious: (sign) => `a ${sign} with a restless current under the calm surface — people miss it, we didn't`,
-    avoidant: (sign) => `a ${sign} doing what ${sign}s do — building walls with excellent craftsmanship`,
+    anxious: (sign) => `${indefiniteArticle(sign)} ${sign} with a restless current under the calm surface — people miss it, we didn't`,
+    avoidant: (sign) => `${indefiniteArticle(sign)} ${sign} doing what ${sign}s do — building walls with excellent craftsmanship`,
   },
   air: {
-    secure: (sign) => `a ${sign} who actually landed the plane — impressive`,
-    anxious: (sign) => `a ${sign}, which means your worries come fully narrated`,
-    avoidant: (sign) => `a ${sign} who keeps love at conversational distance — close enough to be brilliant, far enough to be safe`,
+    secure: (sign) => `${indefiniteArticle(sign)} ${sign} who actually landed the plane — impressive`,
+    anxious: (sign) => `${indefiniteArticle(sign)} ${sign}, which means your worries come fully narrated`,
+    avoidant: (sign) => `${indefiniteArticle(sign)} ${sign} who keeps love at conversational distance — close enough to be brilliant, far enough to be safe`,
   },
   water: {
-    secure: (sign) => `a ${sign} with depth AND stability — an anchored ocean`,
-    anxious: (sign) => `a ${sign}, so the feelings were never going to be small`,
-    avoidant: (sign) => `a ${sign} in a diving bell — deep waters, sealed hatch`,
+    secure: (sign) => `${indefiniteArticle(sign)} ${sign} with depth AND stability — an anchored ocean`,
+    anxious: (sign) => `${indefiniteArticle(sign)} ${sign}, so the feelings were never going to be small`,
+    avoidant: (sign) => `${indefiniteArticle(sign)} ${sign} in a diving bell — deep waters, sealed hatch`,
   },
 };
 
@@ -514,14 +518,20 @@ export function computeSoloResult(userSign: Sign, partnerSign: Sign, S: ScoreSta
 
 /* ================= SHARE / INVITE ================= */
 
+function stripTags(html: string): string {
+  return html.replace(/<\/?[^>]+>/g, "");
+}
+
 export function buildShareText(
   userSign: Sign,
   partnerSign: Sign,
-  result: Pick<SoloResultData, "score" | "scoreTease" | "chips">
+  result: Pick<SoloResultData, "score" | "scoreTease" | "chips" | "sectionA">,
+  origin: string
 ): string {
   const [attLabel, loveLabel, conLabel] = result.chips;
+  const about = stripTags(result.sectionA.paragraphs[0]);
   const crave = SIGN_TRAITS[partnerSign.el].crave.split(" — ")[0];
-  return `🔥 My Ignite Spark Read\n${userSign.n} × ${partnerSign.n} — ${result.score}/100\n"${result.scoreTease}"\n\nThe read on me: ${attLabel} · ${loveLabel} · ${conLabel}.\nThe read on them: a ${partnerSign.n} who craves ${crave}.\n\nTwo minutes, zero mercy — get your own read → ignite.app`;
+  return `🔥 My Ignite Spark Read\n${userSign.n} × ${partnerSign.n} — ${result.score}/100\n"${result.scoreTease}"\n\nABOUT ME · ${attLabel} · ${loveLabel} · ${conLabel}\n${about}\n\nThe read on them: a ${partnerSign.n} who craves ${crave}.\n\nTwo minutes, zero mercy — get your own read → ${origin}`;
 }
 
 export interface GuessQuestion {

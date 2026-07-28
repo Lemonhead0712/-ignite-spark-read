@@ -138,7 +138,7 @@ export function SparkReadApp() {
   async function handleShare() {
     if (!state.userSign || !state.partnerSign || !state.soloResult) return;
     track("share_tap");
-    const text = buildShareText(state.userSign, state.partnerSign, state.soloResult);
+    const text = buildShareText(state.userSign, state.partnerSign, state.soloResult, window.location.origin);
     await handleCopy(text, "Copied — paste it anywhere ✨");
   }
 
@@ -156,7 +156,7 @@ export function SparkReadApp() {
   }
 
   return (
-    <div className="relative z-[1] mx-auto flex min-h-dvh max-w-app flex-col px-5 py-sp-3">
+    <div className="relative z-[1] mx-auto flex min-h-dvh w-full max-w-app flex-col px-5 py-sp-3 md:min-h-[640px] md:max-h-[85dvh] md:max-w-[560px] md:overflow-y-auto md:rounded md:border md:border-line md:bg-[rgba(43,24,48,.45)] md:px-8 md:py-8 md:shadow-[0_30px_90px_rgba(0,0,0,.5)] lg:max-w-[600px]">
       {state.screen === "landing" && <Landing onStart={() => dispatch({ type: "START" })} />}
 
       {state.screen === "signs-you" && (

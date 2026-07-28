@@ -19,9 +19,9 @@
   --them: var(--rose-deep);
   /* type scale */
   --fs-hero: clamp(2.5rem, 9vw, 3.4rem);
-  --fs-title: 1.9rem;
-  --fs-question: 1.6rem;
-  --fs-section: 1.32rem;
+  --fs-title: clamp(1.9rem, 1.7rem + 1vw, 2.3rem);
+  --fs-question: clamp(1.6rem, 1.42rem + 0.9vw, 1.9rem);
+  --fs-section: clamp(1.32rem, 1.22rem + 0.5vw, 1.5rem);
   --fs-body: 0.95rem;
   --fs-meta: 0.8rem;
   --fs-label: 0.68rem;
@@ -53,6 +53,17 @@ body {
   color: var(--ivory);
   line-height: 1.6;
   overflow-x: hidden;
+}
+
+/* on wider viewports, present the app as a centered card instead of a full-bleed column */
+@media (min-width: 768px) {
+  body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100dvh;
+    padding: 32px 16px;
+  }
 }
 
 body::before {
