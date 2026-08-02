@@ -27,7 +27,7 @@ export default function ReadInvitePage({ searchParams }: { searchParams: { invit
   const invite = searchParams.invite ? decodeInvitePayload(searchParams.invite) : null;
 
   return (
-    <div className="relative z-[1] mx-auto flex min-h-dvh w-full max-w-app flex-col px-5 py-sp-3 md:min-h-[640px] md:max-h-[85dvh] md:max-w-[560px] md:overflow-y-auto md:rounded md:border md:border-line md:bg-[rgba(43,24,48,.45)] md:px-8 md:py-8 md:shadow-[0_30px_90px_rgba(0,0,0,.5)] lg:max-w-[600px]">
+    <div className="relative z-[1] mx-auto flex min-h-dvh w-full max-w-app flex-col pl-[max(20px,env(safe-area-inset-left))] pr-[max(20px,env(safe-area-inset-right))] pt-[max(22px,env(safe-area-inset-top))] pb-[max(22px,env(safe-area-inset-bottom))] md:min-h-[640px] md:max-h-[85dvh] md:max-w-[560px] md:overflow-y-auto md:rounded md:border md:border-line md:bg-[rgba(43,24,48,.45)] md:px-8 md:py-8 md:shadow-[0_30px_90px_rgba(0,0,0,.5)] lg:max-w-[600px]">
       <div className="mb-sp-2 flex min-h-[32px] items-center justify-between">
         <Brand />
       </div>

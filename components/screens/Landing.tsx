@@ -1,7 +1,12 @@
 import { Brand } from "../ui/Brand";
 import { Button } from "../ui/Button";
 
-export function Landing({ onStart }: { onStart: () => void }) {
+interface ResumePrompt {
+  onResume: () => void;
+  onDiscard: () => void;
+}
+
+export function Landing({ onStart, resume }: { onStart: () => void; resume?: ResumePrompt }) {
   return (
     <section className="flex flex-1 animate-fadeUp flex-col">
       <div className="mb-sp-2 flex min-h-[32px] items-center justify-between">
@@ -48,7 +53,16 @@ export function Landing({ onStart }: { onStart: () => void }) {
           </span>
         </div>
       </div>
-      <Button onClick={onStart}>Start your Spark Read</Button>
+      {resume ? (
+        <>
+          <Button onClick={resume.onResume}>Continue where you left off</Button>
+          <Button variant="ghost" onClick={resume.onDiscard} className="mt-sp-2">
+            Start a new read instead
+          </Button>
+        </>
+      ) : (
+        <Button onClick={onStart}>Start your Spark Read</Button>
+      )}
     </section>
   );
 }

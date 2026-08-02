@@ -6,18 +6,26 @@ export function InviteRecap({
   gi,
   senderName,
   onAnswer,
-  onBack,
+  onExit,
+  onBackQuestion,
 }: {
   gi: number;
   senderName: string;
   onAnswer: (index: number) => void;
-  onBack: () => void;
+  onExit: () => void;
+  onBackQuestion: () => void;
 }) {
   const question = GUESS_QS[gi];
 
   return (
     <section className="flex flex-1 animate-fadeUp flex-col">
       <div className="mb-sp-2 flex min-h-[32px] items-center justify-between">
+        <button
+          onClick={onExit}
+          className="p-[6px_2px] font-sans text-meta text-ivory-dim focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--ember-2)] focus-visible:outline-offset-[3px] focus-visible:rounded-[6px]"
+        >
+          ✕ Start over
+        </button>
         <Brand />
       </div>
       <ProgressBar percent={(gi / GUESS_QS.length) * 100} />
@@ -27,7 +35,7 @@ export function InviteRecap({
         </div>
         {gi > 0 && (
           <button
-            onClick={onBack}
+            onClick={onBackQuestion}
             className="mt-sp-1 ml-auto block p-[4px_2px] font-sans text-meta text-ivory-dim focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--ember-2)] focus-visible:outline-offset-[3px] focus-visible:rounded-[6px]"
           >
             ‹ Previous

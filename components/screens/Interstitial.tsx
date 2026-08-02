@@ -1,10 +1,12 @@
 import { REACTS, SIGN_DESC, pairKey, type Sign } from "@/lib/engine";
 import { Button } from "../ui/Button";
+import { TopBar } from "../ui/TopBar";
 
 interface Step1Props {
   variant: "step1";
   sign: Sign;
   onContinue: () => void;
+  onBack: () => void;
   ctaLabel?: string;
 }
 
@@ -13,6 +15,7 @@ interface Step2Props {
   sign: Sign;
   userElement: Sign["el"];
   onContinue: () => void;
+  onBack: () => void;
 }
 
 export function Interstitial(props: Step1Props | Step2Props) {
@@ -21,6 +24,7 @@ export function Interstitial(props: Step1Props | Step2Props) {
 
   return (
     <section className="flex flex-1 animate-fadeUp flex-col">
+      <TopBar label="← Back" onAction={props.onBack} />
       <div className="flex flex-1 flex-col items-center justify-center gap-sp-3 text-center">
         <span className={`step-glyph ${isStep2 ? "them" : "you"}`}>{props.sign.g}</span>
 

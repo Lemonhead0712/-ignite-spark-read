@@ -66,6 +66,7 @@ type Action =
   | { type: "BACK_TO_LANDING" }
   | { type: "PICK_USER"; sign: Sign }
   | { type: "GO_PARTNER_PICK" }
+  | { type: "BACK_TO_STEP1" }
   | { type: "PICK_PARTNER"; sign: Sign }
   | { type: "START_QUIZ" }
   | { type: "ANSWER_QUESTION"; option: QuestionOption }
@@ -114,6 +115,8 @@ function reducer(state: AppState, action: Action): AppState {
       return { ...state, userSign: action.sign, screen: "step1" };
     case "GO_PARTNER_PICK":
       return { ...state, screen: "signs-them" };
+    case "BACK_TO_STEP1":
+      return { ...state, screen: "step1" };
     case "PICK_PARTNER":
       return { ...state, partnerSign: action.sign, screen: "step2" };
     case "START_QUIZ":
@@ -183,6 +186,7 @@ export function SparkReadApp() {
   const [state, dispatch] = useReducer(reducer, undefined, initialState);
   const [toast, setToast] = useState<{ message: string; visible: boolean }>({ message: "", visible: false });
   const [copySheet, setCopySheet] = useState<{ visible: boolean; text: string }>({ visible: false, text: "" });
+  const [pendingResume, setPendingResume] = useState<Partial<AppState> | null>(null);
 
   // Runs once after mount (client-only) so the very first render always matches SSR output.
   useEffect(() => {
@@ -200,7 +204,7 @@ export function SparkReadApp() {
       if (savedRaw) {
         const saved = JSON.parse(savedRaw) as Partial<AppState>;
         if (saved?.screen && saved.screen !== "landing") {
-          dispatch({ type: "RESTORE", state: saved });
+          setPendingResume(saved);
         }
       }
     } catch {
@@ -209,18 +213,19 @@ export function SparkReadApp() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Persists progress so an accidental refresh mid-flow doesn't lose it.
+  // Persists progress so an accidental refresh mid-flow doesn't lose it. Holds off
+  // clearing storage while a resume prompt is pending, so the choice stays available.
   useEffect(() => {
     try {
       if (state.screen === "landing") {
-        window.localStorage.removeItem(STORAGE_KEY);
+        if (!pendingResume) window.localStorage.removeItem(STORAGE_KEY);
       } else {
         window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
       }
     } catch {
       // storage full/unavailable — ignore
     }
-  }, [state]);
+  }, [state, pendingResume]);
 
   function showToast(message: string) {
     setToast({ message, visible: true });
@@ -271,15 +276,34 @@ export function SparkReadApp() {
   }
 
   return (
-    <div className="relative z-[1] mx-auto flex min-h-dvh w-full max-w-app flex-col px-5 py-sp-3 md:min-h-[640px] md:max-h-[85dvh] md:max-w-[560px] md:overflow-y-auto md:rounded md:border md:border-line md:bg-[rgba(43,24,48,.45)] md:px-8 md:py-8 md:shadow-[0_30px_90px_rgba(0,0,0,.5)] lg:max-w-[600px]">
-      {state.screen === "landing" && <Landing onStart={() => dispatch({ type: "START" })} />}
+    <div className="relative z-[1] mx-auto flex min-h-dvh w-full max-w-app flex-col pl-[max(20px,env(safe-area-inset-left))] pr-[max(20px,env(safe-area-inset-right))] pt-[max(22px,env(safe-area-inset-top))] pb-[max(22px,env(safe-area-inset-bottom))] md:min-h-[640px] md:max-h-[85dvh] md:max-w-[560px] md:overflow-y-auto md:rounded md:border md:border-line md:bg-[rgba(43,24,48,.45)] md:px-8 md:py-8 md:shadow-[0_30px_90px_rgba(0,0,0,.5)] lg:max-w-[600px]">
+      {state.screen === "landing" && (
+        <Landing
+          onStart={() => dispatch({ type: "START" })}
+          resume={
+            pendingResume
+              ? {
+                  onResume: () => {
+                    dispatch({ type: "RESTORE", state: pendingResume });
+                    setPendingResume(null);
+                  },
+                  onDiscard: () => {
+                    setPendingResume(null);
+                    dispatch({ type: "START" });
+                  },
+                }
+              : undefined
+          }
+        />
+      )}
 
       {state.screen === "invite-recap" && state.invite && (
         <InviteRecap
           gi={state.recapGi}
           senderName={state.invite.u}
           onAnswer={(index) => dispatch({ type: "ANSWER_RECAP", index })}
-          onBack={() => dispatch({ type: "BACK_RECAP" })}
+          onExit={() => dispatch({ type: "BACK_TO_LANDING" })}
+          onBackQuestion={() => dispatch({ type: "BACK_RECAP" })}
         />
       )}
 
@@ -289,6 +313,7 @@ export function SparkReadApp() {
           guesses={state.invite.g}
           answers={state.recapAnswers}
           onContinue={() => dispatch({ type: "CONTINUE_FROM_REVEAL" })}
+          onExit={() => dispatch({ type: "BACK_TO_LANDING" })}
         />
       )}
 
@@ -305,6 +330,7 @@ export function SparkReadApp() {
           variant="step1"
           sign={state.userSign}
           ctaLabel={state.invite ? "Continue — let's see how you compare" : undefined}
+          onBack={() => dispatch({ type: "START" })}
           onContinue={() => {
             if (state.partnerSign) {
               dispatch({ type: "PICK_PARTNER", sign: state.partnerSign });
@@ -318,7 +344,7 @@ export function SparkReadApp() {
       {state.screen === "signs-them" && (
         <SignPicker
           variant="them"
-          onBack={() => dispatch({ type: "BACK_TO_LANDING" })}
+          onBack={() => dispatch({ type: "BACK_TO_STEP1" })}
           onPick={(sign) => dispatch({ type: "PICK_PARTNER", sign })}
         />
       )}
@@ -328,6 +354,7 @@ export function SparkReadApp() {
           variant="step2"
           sign={state.partnerSign}
           userElement={state.userSign.el}
+          onBack={() => dispatch(state.invite ? { type: "BACK_TO_STEP1" } : { type: "GO_PARTNER_PICK" })}
           onContinue={() => {
             track("quiz_start");
             dispatch({ type: "START_QUIZ" });
