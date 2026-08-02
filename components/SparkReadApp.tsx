@@ -340,6 +340,7 @@ export function SparkReadApp() {
           qi={state.qi}
           onAnswer={(option) => {
             const isLast = state.qi + 1 >= QUESTIONS.length;
+            track("quiz_question_answered", { question_index: state.qi });
             dispatch({ type: "ANSWER_QUESTION", option });
             if (isLast) track("quiz_complete");
           }}

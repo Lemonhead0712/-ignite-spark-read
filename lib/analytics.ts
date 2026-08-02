@@ -1,10 +1,17 @@
 /**
- * Provider-agnostic analytics wrapper. Wire a real provider (Plausible, PostHog, GA)
- * into `dispatch` later — call sites don't need to change.
+ * Thin wrapper around Google Analytics (gtag.js, loaded in app/layout.tsx).
+ * Call sites just use `track(event, props)` — the gtag call shape lives here only.
  */
+
+declare global {
+  interface Window {
+    gtag?: (...args: unknown[]) => void;
+  }
+}
 
 export type AnalyticsEvent =
   | "quiz_start"
+  | "quiz_question_answered"
   | "quiz_complete"
   | "guess_start"
   | "guess_sealed"
@@ -20,8 +27,7 @@ function dispatch(event: AnalyticsEvent, props?: AnalyticsProps): void {
     // eslint-disable-next-line no-console
     console.debug("[analytics]", event, props ?? {});
   }
-  // Future: forward to the configured provider, e.g.
-  // window.plausible?.(event, { props });
+  window.gtag?.("event", event, props ?? {});
 }
 
 export function track(event: AnalyticsEvent, props?: AnalyticsProps): void {
