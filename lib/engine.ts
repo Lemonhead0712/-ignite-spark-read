@@ -54,19 +54,23 @@ export interface Question {
 
 /* ================= SIGNS ================= */
 
+// Trailing U+FE0E forces monochrome "text" presentation for these glyphs instead of
+// platform-specific color emoji — without it, some platforms render a fixed-color
+// emoji glyph that ignores our CSS `color` styling entirely (visible on Windows;
+// reported as broken/inconsistent glyph colors on iOS too).
 export const SIGNS: Sign[] = [
-  { n: "Aries", g: "♈", d: "Mar 21–Apr 19", el: "fire" },
-  { n: "Taurus", g: "♉", d: "Apr 20–May 20", el: "earth" },
-  { n: "Gemini", g: "♊", d: "May 21–Jun 20", el: "air" },
-  { n: "Cancer", g: "♋", d: "Jun 21–Jul 22", el: "water" },
-  { n: "Leo", g: "♌", d: "Jul 23–Aug 22", el: "fire" },
-  { n: "Virgo", g: "♍", d: "Aug 23–Sep 22", el: "earth" },
-  { n: "Libra", g: "♎", d: "Sep 23–Oct 22", el: "air" },
-  { n: "Scorpio", g: "♏", d: "Oct 23–Nov 21", el: "water" },
-  { n: "Sagittarius", g: "♐", d: "Nov 22–Dec 21", el: "fire" },
-  { n: "Capricorn", g: "♑", d: "Dec 22–Jan 19", el: "earth" },
-  { n: "Aquarius", g: "♒", d: "Jan 20–Feb 18", el: "air" },
-  { n: "Pisces", g: "♓", d: "Feb 19–Mar 20", el: "water" },
+  { n: "Aries", g: "♈︎", d: "Mar 21–Apr 19", el: "fire" },
+  { n: "Taurus", g: "♉︎", d: "Apr 20–May 20", el: "earth" },
+  { n: "Gemini", g: "♊︎", d: "May 21–Jun 20", el: "air" },
+  { n: "Cancer", g: "♋︎", d: "Jun 21–Jul 22", el: "water" },
+  { n: "Leo", g: "♌︎", d: "Jul 23–Aug 22", el: "fire" },
+  { n: "Virgo", g: "♍︎", d: "Aug 23–Sep 22", el: "earth" },
+  { n: "Libra", g: "♎︎", d: "Sep 23–Oct 22", el: "air" },
+  { n: "Scorpio", g: "♏︎", d: "Oct 23–Nov 21", el: "water" },
+  { n: "Sagittarius", g: "♐︎", d: "Nov 22–Dec 21", el: "fire" },
+  { n: "Capricorn", g: "♑︎", d: "Dec 22–Jan 19", el: "earth" },
+  { n: "Aquarius", g: "♒︎", d: "Jan 20–Feb 18", el: "air" },
+  { n: "Pisces", g: "♓︎", d: "Feb 19–Mar 20", el: "water" },
 ];
 
 export const SIGN_DESC: Record<string, string> = {

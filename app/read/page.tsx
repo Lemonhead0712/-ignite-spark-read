@@ -54,10 +54,10 @@ export default function ReadInvitePage({ searchParams }: { searchParams: { invit
           </>
         )}
         <Link
-          href="/"
+          href={invite ? `/?invite=${encodeURIComponent(searchParams.invite!)}` : "/"}
           className="w-full rounded-full px-7 py-4 text-center font-sans font-semibold text-base text-night bg-gradient-to-r from-[var(--ember-1)] to-[var(--ember-2)] shadow-[0_8px_28px_rgba(255,107,74,.26)] transition-transform active:scale-[.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[3px] focus-visible:outline-ivory"
         >
-          Start your Spark Read
+          {invite ? "Answer their 3 guesses" : "Start your Spark Read"}
         </Link>
       </div>
     </div>

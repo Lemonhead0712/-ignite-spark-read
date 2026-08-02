@@ -1,14 +1,17 @@
 "use client";
 
-import { useReducer, useState } from "react";
+import { useEffect, useReducer, useState } from "react";
 import {
   GUESS_QS,
   QUESTIONS,
+  SIGNS,
   applyWeights,
   buildInviteMessage,
   buildShareText,
   computeSoloResult,
   createEmptyScoreState,
+  decodeInvitePayload,
+  type InvitePayload,
   type QuestionOption,
   type ScoreState,
   type Sign,
@@ -26,19 +29,35 @@ import { Ignition } from "./screens/Ignition";
 import { SoloResult } from "./screens/SoloResult";
 import { GuessMode } from "./screens/GuessMode";
 import { Sealed } from "./screens/Sealed";
+import { InviteRecap } from "./screens/InviteRecap";
+import { InviteReveal } from "./screens/InviteReveal";
 
-type Screen = "landing" | "signs-you" | "step1" | "signs-them" | "step2" | "quiz" | "ignite" | "result" | "guess" | "sealed";
+type Screen =
+  | "landing"
+  | "signs-you"
+  | "step1"
+  | "signs-them"
+  | "step2"
+  | "quiz"
+  | "ignite"
+  | "result"
+  | "guess"
+  | "sealed"
+  | "invite-recap"
+  | "invite-reveal";
 
 interface AppState {
   screen: Screen;
   userSign: Sign | null;
   partnerSign: Sign | null;
   qi: number;
-  S: ScoreState;
-  sigAnswers: string[];
+  quizAnswers: (QuestionOption | null)[];
   soloResult: SoloResultData | null;
   gi: number;
-  guesses: number[];
+  guessAnswers: (number | null)[];
+  invite: InvitePayload | null;
+  recapGi: number;
+  recapAnswers: (number | null)[];
 }
 
 type Action =
@@ -49,11 +68,20 @@ type Action =
   | { type: "PICK_PARTNER"; sign: Sign }
   | { type: "START_QUIZ" }
   | { type: "ANSWER_QUESTION"; option: QuestionOption }
+  | { type: "BACK_QUESTION" }
   | { type: "IGNITE_DONE" }
   | { type: "RESTART" }
   | { type: "START_GUESS" }
   | { type: "ANSWER_GUESS"; index: number }
-  | { type: "BACK_TO_RESULT" };
+  | { type: "BACK_GUESS" }
+  | { type: "BACK_TO_RESULT" }
+  | { type: "LOAD_INVITE"; invite: InvitePayload }
+  | { type: "ANSWER_RECAP"; index: number }
+  | { type: "BACK_RECAP" }
+  | { type: "CONTINUE_FROM_REVEAL" }
+  | { type: "RESTORE"; state: Partial<AppState> };
+
+const STORAGE_KEY = "ignite-progress";
 
 function initialState(): AppState {
   return {
@@ -61,12 +89,18 @@ function initialState(): AppState {
     userSign: null,
     partnerSign: null,
     qi: 0,
-    S: createEmptyScoreState(),
-    sigAnswers: [],
+    quizAnswers: new Array(QUESTIONS.length).fill(null),
     soloResult: null,
     gi: 0,
-    guesses: [],
+    guessAnswers: new Array(GUESS_QS.length).fill(null),
+    invite: null,
+    recapGi: 0,
+    recapAnswers: new Array(GUESS_QS.length).fill(null),
   };
+}
+
+function computeScoreState(answers: (QuestionOption | null)[]): ScoreState {
+  return answers.reduce<ScoreState>((acc, opt) => (opt ? applyWeights(acc, opt.weights) : acc), createEmptyScoreState());
 }
 
 function reducer(state: AppState, action: Action): AppState {
@@ -82,35 +116,63 @@ function reducer(state: AppState, action: Action): AppState {
     case "PICK_PARTNER":
       return { ...state, partnerSign: action.sign, screen: "step2" };
     case "START_QUIZ":
-      return { ...state, qi: 0, S: createEmptyScoreState(), sigAnswers: [], screen: "quiz" };
+      return { ...state, qi: 0, quizAnswers: new Array(QUESTIONS.length).fill(null), screen: "quiz" };
     case "ANSWER_QUESTION": {
-      const nextS = applyWeights(state.S, action.option.weights);
-      const nextSig = action.option.cb ? [...state.sigAnswers, action.option.cb] : state.sigAnswers;
+      const nextAnswers = [...state.quizAnswers];
+      nextAnswers[state.qi] = action.option;
       const nextQi = state.qi + 1;
       return {
         ...state,
-        S: nextS,
-        sigAnswers: nextSig,
+        quizAnswers: nextAnswers,
         qi: nextQi,
         screen: nextQi < QUESTIONS.length ? "quiz" : "ignite",
       };
     }
+    case "BACK_QUESTION":
+      return { ...state, qi: Math.max(0, state.qi - 1) };
     case "IGNITE_DONE": {
       if (!state.userSign || !state.partnerSign) return state;
-      const soloResult = computeSoloResult(state.userSign, state.partnerSign, state.S, state.sigAnswers);
+      const S = computeScoreState(state.quizAnswers);
+      const sigAnswers = state.quizAnswers.filter((o): o is QuestionOption => !!o?.cb).map((o) => o.cb as string);
+      const soloResult = computeSoloResult(state.userSign, state.partnerSign, S, sigAnswers);
       return { ...state, soloResult, screen: "result" };
     }
     case "RESTART":
       return { ...initialState() };
     case "START_GUESS":
-      return { ...state, gi: 0, guesses: [], screen: "guess" };
+      return { ...state, gi: 0, guessAnswers: new Array(GUESS_QS.length).fill(null), screen: "guess" };
     case "ANSWER_GUESS": {
-      const nextGuesses = [...state.guesses, action.index];
+      const nextGuesses = [...state.guessAnswers];
+      nextGuesses[state.gi] = action.index;
       const nextGi = state.gi + 1;
-      return { ...state, guesses: nextGuesses, gi: nextGi, screen: nextGi < GUESS_QS.length ? "guess" : "sealed" };
+      return { ...state, guessAnswers: nextGuesses, gi: nextGi, screen: nextGi < GUESS_QS.length ? "guess" : "sealed" };
     }
+    case "BACK_GUESS":
+      return { ...state, gi: Math.max(0, state.gi - 1) };
     case "BACK_TO_RESULT":
       return { ...state, screen: "result" };
+    case "LOAD_INVITE":
+      return { ...state, invite: action.invite, screen: "invite-recap" };
+    case "ANSWER_RECAP": {
+      const nextRecap = [...state.recapAnswers];
+      nextRecap[state.recapGi] = action.index;
+      const nextGi = state.recapGi + 1;
+      return {
+        ...state,
+        recapAnswers: nextRecap,
+        recapGi: nextGi,
+        screen: nextGi < GUESS_QS.length ? "invite-recap" : "invite-reveal",
+      };
+    }
+    case "BACK_RECAP":
+      return { ...state, recapGi: Math.max(0, state.recapGi - 1) };
+    case "CONTINUE_FROM_REVEAL": {
+      if (!state.invite) return { ...state, screen: "signs-you" };
+      const senderSign = SIGNS.find((s) => s.n === state.invite!.u) ?? null;
+      return { ...state, partnerSign: senderSign, screen: "signs-you" };
+    }
+    case "RESTORE":
+      return { ...state, ...action.state };
     default:
       return state;
   }
@@ -120,6 +182,44 @@ export function SparkReadApp() {
   const [state, dispatch] = useReducer(reducer, undefined, initialState);
   const [toast, setToast] = useState<{ message: string; visible: boolean }>({ message: "", visible: false });
   const [copySheet, setCopySheet] = useState<{ visible: boolean; text: string }>({ visible: false, text: "" });
+
+  // Runs once after mount (client-only) so the very first render always matches SSR output.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const raw = params.get("invite");
+    if (raw) {
+      const decoded = decodeInvitePayload(raw);
+      if (decoded) {
+        dispatch({ type: "LOAD_INVITE", invite: decoded });
+        return;
+      }
+    }
+    try {
+      const savedRaw = window.localStorage.getItem(STORAGE_KEY);
+      if (savedRaw) {
+        const saved = JSON.parse(savedRaw) as Partial<AppState>;
+        if (saved?.screen && saved.screen !== "landing") {
+          dispatch({ type: "RESTORE", state: saved });
+        }
+      }
+    } catch {
+      // corrupt/unavailable storage — ignore, start fresh
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Persists progress so an accidental refresh mid-flow doesn't lose it.
+  useEffect(() => {
+    try {
+      if (state.screen === "landing") {
+        window.localStorage.removeItem(STORAGE_KEY);
+      } else {
+        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      }
+    } catch {
+      // storage full/unavailable — ignore
+    }
+  }, [state]);
 
   function showToast(message: string) {
     setToast({ message, visible: true });
@@ -145,10 +245,11 @@ export function SparkReadApp() {
   async function handleCopyInvite() {
     if (!state.userSign || !state.partnerSign || !state.soloResult) return;
     track("invite_copy");
+    const guesses = state.guessAnswers.map((g) => g ?? 0);
     const { message } = buildInviteMessage(
       state.userSign,
       state.partnerSign,
-      state.guesses,
+      guesses,
       state.soloResult.score,
       window.location.origin
     );
@@ -159,6 +260,24 @@ export function SparkReadApp() {
     <div className="relative z-[1] mx-auto flex min-h-dvh w-full max-w-app flex-col px-5 py-sp-3 md:min-h-[640px] md:max-h-[85dvh] md:max-w-[560px] md:overflow-y-auto md:rounded md:border md:border-line md:bg-[rgba(43,24,48,.45)] md:px-8 md:py-8 md:shadow-[0_30px_90px_rgba(0,0,0,.5)] lg:max-w-[600px]">
       {state.screen === "landing" && <Landing onStart={() => dispatch({ type: "START" })} />}
 
+      {state.screen === "invite-recap" && state.invite && (
+        <InviteRecap
+          gi={state.recapGi}
+          senderName={state.invite.u}
+          onAnswer={(index) => dispatch({ type: "ANSWER_RECAP", index })}
+          onBack={() => dispatch({ type: "BACK_RECAP" })}
+        />
+      )}
+
+      {state.screen === "invite-reveal" && state.invite && (
+        <InviteReveal
+          senderName={state.invite.u}
+          guesses={state.invite.g}
+          answers={state.recapAnswers}
+          onContinue={() => dispatch({ type: "CONTINUE_FROM_REVEAL" })}
+        />
+      )}
+
       {state.screen === "signs-you" && (
         <SignPicker
           variant="you"
@@ -168,7 +287,18 @@ export function SparkReadApp() {
       )}
 
       {state.screen === "step1" && state.userSign && (
-        <Interstitial variant="step1" sign={state.userSign} onContinue={() => dispatch({ type: "GO_PARTNER_PICK" })} />
+        <Interstitial
+          variant="step1"
+          sign={state.userSign}
+          ctaLabel={state.invite ? "Continue — let's see how you compare" : undefined}
+          onContinue={() => {
+            if (state.partnerSign) {
+              dispatch({ type: "PICK_PARTNER", sign: state.partnerSign });
+            } else {
+              dispatch({ type: "GO_PARTNER_PICK" });
+            }
+          }}
+        />
       )}
 
       {state.screen === "signs-them" && (
@@ -200,6 +330,7 @@ export function SparkReadApp() {
             if (isLast) track("quiz_complete");
           }}
           onExit={() => dispatch({ type: "BACK_TO_LANDING" })}
+          onBackQuestion={() => dispatch({ type: "BACK_QUESTION" })}
         />
       )}
 
@@ -230,6 +361,7 @@ export function SparkReadApp() {
             if (isLast) track("guess_sealed");
           }}
           onBack={() => dispatch({ type: "BACK_TO_RESULT" })}
+          onBackQuestion={() => dispatch({ type: "BACK_GUESS" })}
         />
       )}
 

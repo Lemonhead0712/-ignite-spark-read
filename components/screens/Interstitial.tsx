@@ -5,6 +5,7 @@ interface Step1Props {
   variant: "step1";
   sign: Sign;
   onContinue: () => void;
+  ctaLabel?: string;
 }
 
 interface Step2Props {
@@ -44,7 +45,7 @@ export function Interstitial(props: Step1Props | Step2Props) {
         )}
 
         <Button onClick={props.onContinue} className="max-w-[320px] animate-softUp [animation-delay:1.1s]">
-          {isStep2 ? "Continue — let's do this" : "Next — who's on your mind?"}
+          {props.variant === "step1" ? props.ctaLabel ?? "Next — who's on your mind?" : "Continue — let's do this"}
         </Button>
       </div>
     </section>
