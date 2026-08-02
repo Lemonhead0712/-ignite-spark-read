@@ -10,10 +10,11 @@ interface SoloResultProps {
   result: SoloResultData;
   onRetake: () => void;
   onShare: () => void;
+  onSaveImage: () => void;
   onStartGuess: () => void;
 }
 
-export function SoloResult({ userSign, partnerSign, result, onRetake, onShare, onStartGuess }: SoloResultProps) {
+export function SoloResult({ userSign, partnerSign, result, onRetake, onShare, onSaveImage, onStartGuess }: SoloResultProps) {
   return (
     <section className="flex flex-1 animate-fadeUp flex-col">
       <TopBar label="↺ Retake" onAction={onRetake} />
@@ -89,7 +90,10 @@ export function SoloResult({ userSign, partnerSign, result, onRetake, onShare, o
       </div>
 
       <div className="flex flex-col pb-sp-1">
-        <Button onClick={onShare}>Copy my read to share</Button>
+        <Button onClick={onSaveImage}>Save result image</Button>
+        <Button variant="ghost" onClick={onShare} className="mt-sp-2">
+          Copy my read to share
+        </Button>
         <Button variant="ghost" onClick={onRetake} className="mt-sp-2">
           Start a new read
         </Button>

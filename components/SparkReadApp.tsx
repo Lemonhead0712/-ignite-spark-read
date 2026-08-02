@@ -18,6 +18,7 @@ import {
   type SoloResultData,
 } from "@/lib/engine";
 import { copyText } from "@/lib/clipboard";
+import { saveOrShareResultCard } from "@/lib/resultCard";
 import { track } from "@/lib/analytics";
 import { CopySheet } from "./ui/CopySheet";
 import { Toast } from "./ui/Toast";
@@ -242,6 +243,19 @@ export function SparkReadApp() {
     await handleCopy(text, "Copied — paste it anywhere ✨");
   }
 
+  async function handleSaveImage() {
+    if (!state.userSign || !state.partnerSign || !state.soloResult) return;
+    track("save_image");
+    const outcome = await saveOrShareResultCard({
+      userSign: state.userSign,
+      partnerSign: state.partnerSign,
+      result: state.soloResult,
+    });
+    if (outcome === "shared") showToast("Shared ✨");
+    else if (outcome === "downloaded") showToast("Image saved — check your downloads ✨");
+    else showToast("Couldn't generate the image — try again");
+  }
+
   async function handleCopyInvite() {
     if (!state.userSign || !state.partnerSign || !state.soloResult) return;
     track("invite_copy");
@@ -345,6 +359,7 @@ export function SparkReadApp() {
           result={state.soloResult}
           onRetake={() => dispatch({ type: "RESTART" })}
           onShare={handleShare}
+          onSaveImage={handleSaveImage}
           onStartGuess={() => {
             track("guess_start");
             dispatch({ type: "START_GUESS" });
