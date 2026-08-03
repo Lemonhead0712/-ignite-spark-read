@@ -2,8 +2,9 @@
 
 import { useEffect, useReducer, useState } from "react";
 import {
-  GUESS_QS,
+  GUESS_ROUND_SIZE,
   QUESTIONS,
+  QUICK_QUESTION_INDICES,
   SIGNS,
   applyWeights,
   buildInviteMessage,
@@ -12,6 +13,7 @@ import {
   createEmptyScoreState,
   decodeInvitePayload,
   type InvitePayload,
+  type Question,
   type QuestionOption,
   type ScoreState,
   type Sign,
@@ -33,6 +35,14 @@ import { Sealed } from "./screens/Sealed";
 import { InviteRecap } from "./screens/InviteRecap";
 import { InviteReveal } from "./screens/InviteReveal";
 
+const QUICK_QUESTIONS: Question[] = QUICK_QUESTION_INDICES.map((i) => QUESTIONS[i]);
+
+type QuizMode = "full" | "quick";
+
+function activeQuestions(mode: QuizMode): Question[] {
+  return mode === "quick" ? QUICK_QUESTIONS : QUESTIONS;
+}
+
 type Screen =
   | "landing"
   | "signs-you"
@@ -51,18 +61,20 @@ interface AppState {
   screen: Screen;
   userSign: Sign | null;
   partnerSign: Sign | null;
+  quizMode: QuizMode;
   qi: number;
   quizAnswers: (QuestionOption | null)[];
   soloResult: SoloResultData | null;
   gi: number;
   guessAnswers: (number | null)[];
+  guessRound: number;
   invite: InvitePayload | null;
   recapGi: number;
   recapAnswers: (number | null)[];
 }
 
 type Action =
-  | { type: "START" }
+  | { type: "START"; mode: QuizMode }
   | { type: "BACK_TO_LANDING" }
   | { type: "PICK_USER"; sign: Sign }
   | { type: "GO_PARTNER_PICK" }
@@ -90,14 +102,16 @@ function initialState(): AppState {
     screen: "landing",
     userSign: null,
     partnerSign: null,
+    quizMode: "full",
     qi: 0,
     quizAnswers: new Array(QUESTIONS.length).fill(null),
     soloResult: null,
     gi: 0,
-    guessAnswers: new Array(GUESS_QS.length).fill(null),
+    guessAnswers: new Array(GUESS_ROUND_SIZE).fill(null),
+    guessRound: 0,
     invite: null,
     recapGi: 0,
-    recapAnswers: new Array(GUESS_QS.length).fill(null),
+    recapAnswers: new Array(GUESS_ROUND_SIZE).fill(null),
   };
 }
 
@@ -108,7 +122,7 @@ function computeScoreState(answers: (QuestionOption | null)[]): ScoreState {
 function reducer(state: AppState, action: Action): AppState {
   switch (action.type) {
     case "START":
-      return { ...state, screen: "signs-you" };
+      return { ...state, quizMode: action.mode, screen: "signs-you" };
     case "BACK_TO_LANDING":
       return { ...initialState() };
     case "PICK_USER":
@@ -120,7 +134,7 @@ function reducer(state: AppState, action: Action): AppState {
     case "PICK_PARTNER":
       return { ...state, partnerSign: action.sign, screen: "step2" };
     case "START_QUIZ":
-      return { ...state, qi: 0, quizAnswers: new Array(QUESTIONS.length).fill(null), screen: "quiz" };
+      return { ...state, qi: 0, quizAnswers: new Array(activeQuestions(state.quizMode).length).fill(null), screen: "quiz" };
     case "ANSWER_QUESTION": {
       const nextAnswers = [...state.quizAnswers];
       nextAnswers[state.qi] = action.option;
@@ -129,7 +143,7 @@ function reducer(state: AppState, action: Action): AppState {
         ...state,
         quizAnswers: nextAnswers,
         qi: nextQi,
-        screen: nextQi < QUESTIONS.length ? "quiz" : "ignite",
+        screen: nextQi < activeQuestions(state.quizMode).length ? "quiz" : "ignite",
       };
     }
     case "BACK_QUESTION":
@@ -144,12 +158,18 @@ function reducer(state: AppState, action: Action): AppState {
     case "RESTART":
       return { ...initialState() };
     case "START_GUESS":
-      return { ...state, gi: 0, guessAnswers: new Array(GUESS_QS.length).fill(null), screen: "guess" };
+      return {
+        ...state,
+        gi: 0,
+        guessAnswers: new Array(GUESS_ROUND_SIZE).fill(null),
+        guessRound: (state.invite?.r ?? -1) + 1,
+        screen: "guess",
+      };
     case "ANSWER_GUESS": {
       const nextGuesses = [...state.guessAnswers];
       nextGuesses[state.gi] = action.index;
       const nextGi = state.gi + 1;
-      return { ...state, guessAnswers: nextGuesses, gi: nextGi, screen: nextGi < GUESS_QS.length ? "guess" : "sealed" };
+      return { ...state, guessAnswers: nextGuesses, gi: nextGi, screen: nextGi < GUESS_ROUND_SIZE ? "guess" : "sealed" };
     }
     case "BACK_GUESS":
       return { ...state, gi: Math.max(0, state.gi - 1) };
@@ -165,7 +185,7 @@ function reducer(state: AppState, action: Action): AppState {
         ...state,
         recapAnswers: nextRecap,
         recapGi: nextGi,
-        screen: nextGi < GUESS_QS.length ? "invite-recap" : "invite-reveal",
+        screen: nextGi < GUESS_ROUND_SIZE ? "invite-recap" : "invite-reveal",
       };
     }
     case "BACK_RECAP":
@@ -173,7 +193,7 @@ function reducer(state: AppState, action: Action): AppState {
     case "CONTINUE_FROM_REVEAL": {
       if (!state.invite) return { ...state, screen: "signs-you" };
       const senderSign = SIGNS.find((s) => s.n === state.invite!.u) ?? null;
-      return { ...state, partnerSign: senderSign, screen: "signs-you" };
+      return { ...state, partnerSign: senderSign, quizMode: "full", screen: "signs-you" };
     }
     case "RESTORE":
       return { ...state, ...action.state };
@@ -270,6 +290,7 @@ export function SparkReadApp() {
       state.partnerSign,
       guesses,
       state.soloResult.score,
+      state.guessRound,
       window.location.origin
     );
     await handleCopy(message, "Invite copied — send it to them ✨");
@@ -279,7 +300,8 @@ export function SparkReadApp() {
     <div className="relative z-[1] mx-auto flex min-h-dvh w-full max-w-app flex-col pl-[max(20px,env(safe-area-inset-left))] pr-[max(20px,env(safe-area-inset-right))] pt-[max(22px,env(safe-area-inset-top))] pb-[max(22px,env(safe-area-inset-bottom))] md:min-h-[640px] md:max-h-[85dvh] md:max-w-[560px] md:overflow-y-auto md:rounded md:border md:border-line md:bg-[rgba(43,24,48,.45)] md:px-8 md:py-8 md:shadow-[0_30px_90px_rgba(0,0,0,.5)] lg:max-w-[600px]">
       {state.screen === "landing" && (
         <Landing
-          onStart={() => dispatch({ type: "START" })}
+          onStart={() => dispatch({ type: "START", mode: "full" })}
+          onQuickStart={() => dispatch({ type: "START", mode: "quick" })}
           resume={
             pendingResume
               ? {
@@ -289,7 +311,7 @@ export function SparkReadApp() {
                   },
                   onDiscard: () => {
                     setPendingResume(null);
-                    dispatch({ type: "START" });
+                    dispatch({ type: "START", mode: "full" });
                   },
                 }
               : undefined
@@ -299,6 +321,7 @@ export function SparkReadApp() {
 
       {state.screen === "invite-recap" && state.invite && (
         <InviteRecap
+          round={state.invite.r}
           gi={state.recapGi}
           senderName={state.invite.u}
           onAnswer={(index) => dispatch({ type: "ANSWER_RECAP", index })}
@@ -309,6 +332,7 @@ export function SparkReadApp() {
 
       {state.screen === "invite-reveal" && state.invite && (
         <InviteReveal
+          round={state.invite.r}
           senderName={state.invite.u}
           guesses={state.invite.g}
           answers={state.recapAnswers}
@@ -330,7 +354,7 @@ export function SparkReadApp() {
           variant="step1"
           sign={state.userSign}
           ctaLabel={state.invite ? "Continue — let's see how you compare" : undefined}
-          onBack={() => dispatch({ type: "START" })}
+          onBack={() => dispatch({ type: "START", mode: state.quizMode })}
           onContinue={() => {
             if (state.partnerSign) {
               dispatch({ type: "PICK_PARTNER", sign: state.partnerSign });
@@ -364,12 +388,13 @@ export function SparkReadApp() {
 
       {state.screen === "quiz" && (
         <Quiz
+          questions={activeQuestions(state.quizMode)}
           qi={state.qi}
           onAnswer={(option) => {
-            const isLast = state.qi + 1 >= QUESTIONS.length;
-            track("quiz_question_answered", { question_index: state.qi });
+            const isLast = state.qi + 1 >= activeQuestions(state.quizMode).length;
+            track("quiz_question_answered", { question_index: state.qi, quiz_mode: state.quizMode });
             dispatch({ type: "ANSWER_QUESTION", option });
-            if (isLast) track("quiz_complete");
+            if (isLast) track("quiz_complete", { quiz_mode: state.quizMode });
           }}
           onExit={() => dispatch({ type: "BACK_TO_LANDING" })}
           onBackQuestion={() => dispatch({ type: "BACK_QUESTION" })}
@@ -397,11 +422,12 @@ export function SparkReadApp() {
 
       {state.screen === "guess" && (
         <GuessMode
+          round={state.guessRound}
           gi={state.gi}
           onAnswer={(index) => {
-            const isLast = state.gi + 1 >= GUESS_QS.length;
+            const isLast = state.gi + 1 >= GUESS_ROUND_SIZE;
             dispatch({ type: "ANSWER_GUESS", index });
-            if (isLast) track("guess_sealed");
+            if (isLast) track("guess_sealed", { guess_round: state.guessRound });
           }}
           onBack={() => dispatch({ type: "BACK_TO_RESULT" })}
           onBackQuestion={() => dispatch({ type: "BACK_GUESS" })}

@@ -1,27 +1,30 @@
-import { GUESS_QS } from "@/lib/engine";
+import { GUESS_ROUND_SIZE, getGuessRoundQuestions } from "@/lib/engine";
 import { Brand } from "../ui/Brand";
 import { Button } from "../ui/Button";
 
 export function InviteReveal({
+  round,
   senderName,
   guesses,
   answers,
   onContinue,
   onExit,
 }: {
+  round: number;
   senderName: string;
   guesses: number[];
   answers: (number | null)[];
   onContinue: () => void;
   onExit: () => void;
 }) {
-  const matches = GUESS_QS.reduce((count, _, i) => (guesses[i] === answers[i] ? count + 1 : count), 0);
+  const questions = getGuessRoundQuestions(round);
+  const matches = questions.reduce((count, _, i) => (guesses[i] === answers[i] ? count + 1 : count), 0);
   const headline =
-    matches === GUESS_QS.length
+    matches === GUESS_ROUND_SIZE
       ? `${senderName} read you perfectly.`
       : matches === 0
         ? `${senderName} got none of it. Bold guesses.`
-        : `${senderName} got ${matches} of ${GUESS_QS.length} right.`;
+        : `${senderName} got ${matches} of ${GUESS_ROUND_SIZE} right.`;
 
   return (
     <section className="flex flex-1 animate-fadeUp flex-col">
@@ -36,11 +39,11 @@ export function InviteReveal({
       </div>
       <div className="flex flex-1 flex-col gap-sp-3 overflow-y-auto py-sp-2">
         <div className="text-center">
-          <div className="mb-sp-2 text-[3rem]">{matches === GUESS_QS.length ? "🎯" : matches === 0 ? "😬" : "🔥"}</div>
+          <div className="mb-sp-2 text-[3rem]">{matches === GUESS_ROUND_SIZE ? "🎯" : matches === 0 ? "😬" : "🔥"}</div>
           <h2 className="font-serif text-title font-normal leading-[1.18]">{headline}</h2>
         </div>
         <div className="flex flex-col gap-sp-2">
-          {GUESS_QS.map((q, i) => {
+          {questions.map((q, i) => {
             const correct = guesses[i] === answers[i];
             const yourAnswer = answers[i];
             return (

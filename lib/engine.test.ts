@@ -3,6 +3,9 @@ import {
   ATT_BLEND,
   CON_BLEND,
   GUESS_QS,
+  GUESS_ROUND_SIZE,
+  QUESTIONS,
+  QUICK_QUESTION_INDICES,
   SIGNS,
   buildInviteMessage,
   buildShareText,
@@ -10,6 +13,7 @@ import {
   decodeInvitePayload,
   computeSoloResult,
   createEmptyScoreState,
+  getGuessRoundQuestions,
   type AttKey,
   type ConKey,
   type LoveKey,
@@ -171,16 +175,21 @@ describe("share and invite text", () => {
   });
 
   it("builds an invite message carrying a base64 payload link", () => {
-    const { message, link } = buildInviteMessage(userSign, partnerSign, [0, 1, 2], 72, "http://localhost:3000");
+    const { message, link } = buildInviteMessage(userSign, partnerSign, [0, 1, 2], 72, 1, "http://localhost:3000");
     expect(message).toContain(link);
     expect(link).toContain("http://localhost:3000/read?invite=");
   });
 
-  it("round-trips the invite payload through decodeInvitePayload", () => {
-    const { link } = buildInviteMessage(userSign, partnerSign, [0, 1, 2], 72, "http://localhost:3000");
+  it("round-trips the invite payload (including round) through decodeInvitePayload", () => {
+    const { link } = buildInviteMessage(userSign, partnerSign, [0, 1, 2], 72, 1, "http://localhost:3000");
     const raw = new URL(link).searchParams.get("invite")!;
     const decoded = decodeInvitePayload(raw);
-    expect(decoded).toEqual({ u: "Aries", p: "Scorpio", g: [0, 1, 2], s: 72 });
+    expect(decoded).toEqual({ u: "Aries", p: "Scorpio", g: [0, 1, 2], s: 72, r: 1 });
+  });
+
+  it("defaults round to 0 for older invite payloads that predate the round field", () => {
+    const legacyPayload = btoa(JSON.stringify({ u: "Aries", p: "Scorpio", g: [0, 1, 2], s: 72 }));
+    expect(decodeInvitePayload(legacyPayload)).toEqual({ u: "Aries", p: "Scorpio", g: [0, 1, 2], s: 72, r: 0 });
   });
 
   it("returns null for an invalid invite payload", () => {
@@ -189,8 +198,52 @@ describe("share and invite text", () => {
 });
 
 describe("GUESS_QS", () => {
-  it("has exactly 3 fixed questions with 4 options each", () => {
-    expect(GUESS_QS).toHaveLength(3);
+  it("has exactly 5 rounds of 3 questions, each with 4 options", () => {
+    expect(GUESS_QS).toHaveLength(15);
+    expect(GUESS_QS.length % GUESS_ROUND_SIZE).toBe(0);
     GUESS_QS.forEach((q) => expect(q.o).toHaveLength(4));
+  });
+
+  it("keeps round 0 (the original 3 questions) exactly unchanged for backward compatibility", () => {
+    expect(GUESS_QS.slice(0, 3)).toEqual([
+      { q: "After a long week, they'd rather…", o: ["Go out and be around energy", "Stay in, just the two of you", "Have space to themselves first", "Talk through the whole week"] },
+      { q: "If you two disagreed tonight, they would…", o: ["Say it straight, right away", "Cool off first, talk later", "Smooth it over quickly", "Turn it into a long conversation"] },
+      { q: "Their idea of feeling loved is mostly…", o: ["Hearing it in words", "Your undivided time", "Things you do for them", "Physical closeness"] },
+    ]);
+  });
+
+  it("has no duplicate question text across rounds", () => {
+    const texts = GUESS_QS.map((q) => q.q);
+    expect(new Set(texts).size).toBe(texts.length);
+  });
+});
+
+describe("getGuessRoundQuestions", () => {
+  it("returns round 0's questions for round 0", () => {
+    expect(getGuessRoundQuestions(0)).toEqual(GUESS_QS.slice(0, 3));
+  });
+
+  it("returns a different 3 questions for each of the 5 rounds", () => {
+    const rounds = [0, 1, 2, 3, 4].map((r) => getGuessRoundQuestions(r));
+    const allTexts = rounds.flatMap((r) => r.map((q) => q.q));
+    expect(new Set(allTexts).size).toBe(15);
+  });
+
+  it("wraps around after 5 rounds instead of going out of bounds", () => {
+    expect(getGuessRoundQuestions(5)).toEqual(getGuessRoundQuestions(0));
+    expect(getGuessRoundQuestions(7)).toEqual(getGuessRoundQuestions(2));
+  });
+
+  it("never throws or goes out of bounds for large or negative round numbers", () => {
+    expect(getGuessRoundQuestions(-3)).toHaveLength(3);
+    expect(getGuessRoundQuestions(1000)).toHaveLength(3);
+  });
+});
+
+describe("QUICK_QUESTION_INDICES", () => {
+  it("references exactly 5 valid, unique indices into QUESTIONS", () => {
+    expect(QUICK_QUESTION_INDICES).toHaveLength(5);
+    expect(new Set(QUICK_QUESTION_INDICES).size).toBe(5);
+    QUICK_QUESTION_INDICES.forEach((i) => expect(QUESTIONS[i]).toBeDefined());
   });
 });

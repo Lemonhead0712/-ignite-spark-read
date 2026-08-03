@@ -240,6 +240,15 @@ export const QUESTIONS: Question[] = [
   },
 ];
 
+/**
+ * Indices into QUESTIONS for the 5-question "quick read" — a curated subset
+ * kept in sync with the full bank (no separate content to drift). Chosen for
+ * balanced signal: 2 attachment, 2 love-language (covering all 5 love-language
+ * options between them), 1 conflict-style — attachment and love language carry
+ * the most result-copy weight, so they get the extra question.
+ */
+export const QUICK_QUESTION_INDICES = [0, 1, 2, 5, 6];
+
 /* ============ RESULT COPY ============ */
 
 export const ATT_COPY: Record<AttKey, [string, string]> = {
@@ -543,20 +552,53 @@ export interface GuessQuestion {
   o: string[];
 }
 
+/**
+ * 5 rounds of 3 questions each. Round 0 (the first 3) must stay word-for-word
+ * unchanged — invite links already in the wild encode only answer *indices*
+ * against these exact questions/options, not the text itself, so reordering
+ * or rewording round 0 would make old links show wrong comparisons.
+ */
 export const GUESS_QS: GuessQuestion[] = [
+  // round 0
   { q: "After a long week, they'd rather…", o: ["Go out and be around energy", "Stay in, just the two of you", "Have space to themselves first", "Talk through the whole week"] },
   { q: "If you two disagreed tonight, they would…", o: ["Say it straight, right away", "Cool off first, talk later", "Smooth it over quickly", "Turn it into a long conversation"] },
   { q: "Their idea of feeling loved is mostly…", o: ["Hearing it in words", "Your undivided time", "Things you do for them", "Physical closeness"] },
+  // round 1
+  { q: "When something good happens, they immediately want to…", o: ["Call or text you before anyone else", "Wait to tell you in person", "Post about it before telling most people", "Sit with it privately first, share later"] },
+  { q: "Their biggest ick in a partner is…", o: ["Being flaky or unreliable", "Oversharing with everyone but them", "Being negative or complaining constantly", "Playing games instead of being direct"] },
+  { q: "If you surprised them with a spontaneous trip, they'd…", o: ["Be thrilled, bags packed in ten minutes", "Love it but need a day to mentally prep", "Ask a dozen logistics questions first", "Secretly wish you'd asked before booking"] },
+  // round 2
+  { q: "Their honest first instinct meeting your friends is…", o: ["Charm the whole room immediately", "Warm up slowly, one person at a time", "Quietly observe before saying much", "Feel a little nervous, hide it well"] },
+  { q: "When they're stressed, what actually helps is…", o: ["Being asked what they need, directly", "Someone just sitting with them, no fixing", "Space to sort it out solo, then talk", "Distraction — humor, a show, anything else"] },
+  { q: "Their money instinct leans…", o: ["Spend on experiences, worry later", "Save first, splurge occasionally", "Track every dollar, no surprises", "Generous with others, frugal with themselves"] },
+  // round 3
+  { q: "The compliment that actually lands for them is…", o: ["That they're smart or good at something", "That they're easy to be around", "That they're attractive or magnetic", "That they made someone's day better"] },
+  { q: "Their sense of humor runs…", o: ["Dry, deadpan, blink-and-you-miss-it", "Loud, chaotic, full commitment to the bit", "Witty wordplay, puns they're proud of", "Dark and a little unhinged, honestly"] },
+  { q: "If you two hadn't talked all day, by evening they're…", o: ["Not thinking about it at all", "Wondering, but won't be the one to text first", "Already sent three check-in texts", "Assuming you need space and giving it"] },
+  // round 4
+  { q: "Their idea of a perfect Sunday is…", o: ["Fully planned — brunch, errands, a plan", "Zero plans, whatever the day brings", "Productive — cleaning, prepping the week", "Horizontal, phone off, doing nothing at all"] },
+  { q: "When they mess up, they…", o: ["Own it immediately, no excuses", "Need a minute before they can admit it", "Apologize by doing something, not saying it", "Get defensive first, come around later"] },
+  { q: "What they'd never say out loud but definitely think is…", o: ["They're a little more jealous than they let on", "They overthink texts way more than they admit", "They need more reassurance than they ask for", "They're pickier than they let on about small things"] },
 ];
+
+export const GUESS_ROUND_SIZE = 3;
+
+/** Wraps safely for any integer round (including ones from old/foreign invite payloads). */
+export function getGuessRoundQuestions(round: number): GuessQuestion[] {
+  const totalRounds = Math.floor(GUESS_QS.length / GUESS_ROUND_SIZE);
+  const idx = ((round % totalRounds) + totalRounds) % totalRounds;
+  return GUESS_QS.slice(idx * GUESS_ROUND_SIZE, idx * GUESS_ROUND_SIZE + GUESS_ROUND_SIZE);
+}
 
 export function buildInviteMessage(
   userSign: Sign,
   partnerSign: Sign,
   guesses: number[],
   sparkScore: number,
+  round: number,
   origin: string
 ): { message: string; link: string } {
-  const payload = btoa(JSON.stringify({ u: userSign.n, p: partnerSign.n, g: guesses, s: sparkScore }));
+  const payload = btoa(JSON.stringify({ u: userSign.n, p: partnerSign.n, g: guesses, s: sparkScore, r: round }));
   const link = `${origin}/read?invite=${payload}`;
   const message = `I took a Spark Read on us (${userSign.n} × ${partnerSign.n} — we scored ${sparkScore}) and sealed 3 guesses about you. Take yours and unlock them → ${link}`;
   return { message, link };
@@ -567,13 +609,14 @@ export interface InvitePayload {
   p: string;
   g: number[];
   s: number;
+  r: number;
 }
 
 export function decodeInvitePayload(raw: string): InvitePayload | null {
   try {
     const data = JSON.parse(atob(raw));
     if (typeof data?.u === "string" && typeof data?.p === "string" && typeof data?.s === "number" && Array.isArray(data?.g)) {
-      return { u: data.u, p: data.p, g: data.g, s: data.s };
+      return { u: data.u, p: data.p, g: data.g, s: data.s, r: typeof data?.r === "number" ? data.r : 0 };
     }
     return null;
   } catch {

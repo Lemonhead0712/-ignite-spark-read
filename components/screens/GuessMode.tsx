@@ -1,28 +1,34 @@
-import { GUESS_QS } from "@/lib/engine";
+import { GUESS_ROUND_SIZE, getGuessRoundQuestions } from "@/lib/engine";
 import { ProgressBar } from "../ui/ProgressBar";
 import { TopBar } from "../ui/TopBar";
 
 export function GuessMode({
+  round,
   gi,
   onAnswer,
   onBack,
   onBackQuestion,
 }: {
+  round: number;
   gi: number;
   onAnswer: (optionIndex: number) => void;
   onBack: () => void;
   onBackQuestion: () => void;
 }) {
-  const question = GUESS_QS[gi];
+  const questions = getGuessRoundQuestions(round);
+  const question = questions[gi];
 
   return (
     <section className="flex flex-1 animate-fadeUp flex-col">
       <TopBar label="← Back to results" onAction={onBack} />
-      <ProgressBar percent={(gi / GUESS_QS.length) * 100} />
+      <ProgressBar percent={(gi / GUESS_ROUND_SIZE) * 100} />
       <div className="mb-sp-3">
         <div className="text-label uppercase tracking-[.2em] text-rose">
-          Guess {gi + 1} of {GUESS_QS.length} · How would THEY answer?
+          Guess {gi + 1} of {GUESS_ROUND_SIZE} · How would THEY answer?
         </div>
+        {gi === 0 && round > 0 && (
+          <div className="mt-sp-1 text-meta text-ivory-dim">Fresh questions this round — keep them guessing.</div>
+        )}
         {gi > 0 && (
           <button
             onClick={onBackQuestion}

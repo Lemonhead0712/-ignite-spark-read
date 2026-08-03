@@ -1,27 +1,29 @@
-import { QUESTIONS, type QuestionOption } from "@/lib/engine";
+import type { Question, QuestionOption } from "@/lib/engine";
 import { ProgressBar } from "../ui/ProgressBar";
 import { TopBar } from "../ui/TopBar";
 
 export function Quiz({
+  questions,
   qi,
   onAnswer,
   onExit,
   onBackQuestion,
 }: {
+  questions: Question[];
   qi: number;
   onAnswer: (option: QuestionOption) => void;
   onExit: () => void;
   onBackQuestion: () => void;
 }) {
-  const question = QUESTIONS[qi];
+  const question = questions[qi];
 
   return (
     <section className="flex flex-1 animate-fadeUp flex-col">
       <TopBar label="✕ Exit" onAction={onExit} />
-      <ProgressBar percent={(qi / QUESTIONS.length) * 100} />
+      <ProgressBar percent={(qi / questions.length) * 100} />
       <div className="mb-sp-3">
         <div className="text-label uppercase tracking-[.2em] text-rose">
-          Question {qi + 1} of {QUESTIONS.length}
+          Question {qi + 1} of {questions.length}
         </div>
         {qi > 0 && (
           <button

@@ -6,7 +6,15 @@ interface ResumePrompt {
   onDiscard: () => void;
 }
 
-export function Landing({ onStart, resume }: { onStart: () => void; resume?: ResumePrompt }) {
+export function Landing({
+  onStart,
+  onQuickStart,
+  resume,
+}: {
+  onStart: () => void;
+  onQuickStart: () => void;
+  resume?: ResumePrompt;
+}) {
   return (
     <section className="flex flex-1 animate-fadeUp flex-col">
       <div className="mb-sp-2 flex min-h-[32px] items-center justify-between">
@@ -61,7 +69,15 @@ export function Landing({ onStart, resume }: { onStart: () => void; resume?: Res
           </Button>
         </>
       ) : (
-        <Button onClick={onStart}>Start your Spark Read</Button>
+        <>
+          <Button onClick={onStart}>Start your Spark Read</Button>
+          <button
+            onClick={onQuickStart}
+            className="mt-sp-2 p-[6px] text-center font-sans text-meta text-ivory-dim underline-offset-2 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--ember-2)] focus-visible:outline-offset-[3px] focus-visible:rounded-[6px]"
+          >
+            In a hurry? Try the 5-question quick read →
+          </button>
+        </>
       )}
     </section>
   );

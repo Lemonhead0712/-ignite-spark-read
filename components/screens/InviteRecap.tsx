@@ -1,21 +1,24 @@
-import { GUESS_QS } from "@/lib/engine";
+import { GUESS_ROUND_SIZE, getGuessRoundQuestions } from "@/lib/engine";
 import { Brand } from "../ui/Brand";
 import { ProgressBar } from "../ui/ProgressBar";
 
 export function InviteRecap({
+  round,
   gi,
   senderName,
   onAnswer,
   onExit,
   onBackQuestion,
 }: {
+  round: number;
   gi: number;
   senderName: string;
   onAnswer: (index: number) => void;
   onExit: () => void;
   onBackQuestion: () => void;
 }) {
-  const question = GUESS_QS[gi];
+  const questions = getGuessRoundQuestions(round);
+  const question = questions[gi];
 
   return (
     <section className="flex flex-1 animate-fadeUp flex-col">
@@ -28,10 +31,10 @@ export function InviteRecap({
         </button>
         <Brand />
       </div>
-      <ProgressBar percent={(gi / GUESS_QS.length) * 100} />
+      <ProgressBar percent={(gi / GUESS_ROUND_SIZE) * 100} />
       <div className="mb-sp-1">
         <div className="text-label uppercase tracking-[.2em] text-rose">
-          Question {gi + 1} of {GUESS_QS.length} · Your real answer
+          Question {gi + 1} of {GUESS_ROUND_SIZE} · Your real answer
         </div>
         {gi > 0 && (
           <button
