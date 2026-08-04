@@ -7,6 +7,7 @@ export function InviteReveal({
   senderName,
   guesses,
   answers,
+  isReturningPair,
   onContinue,
   onExit,
 }: {
@@ -14,6 +15,7 @@ export function InviteReveal({
   senderName: string;
   guesses: number[];
   answers: (number | null)[];
+  isReturningPair: boolean;
   onContinue: () => void;
   onExit: () => void;
 }) {
@@ -67,7 +69,10 @@ export function InviteReveal({
           })}
         </div>
       </div>
-      <Button onClick={onContinue}>See your own Spark Read</Button>
+      {!isReturningPair && (
+        <p className="mb-sp-2 text-center text-meta text-ivory-dim">Just 5 quick questions, then you're back in the game.</p>
+      )}
+      <Button onClick={onContinue}>{isReturningPair ? "Back to the game" : "Take your quick 5-question read"}</Button>
     </section>
   );
 }

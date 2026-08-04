@@ -225,8 +225,11 @@ function reducer(state: AppState, action: Action): AppState {
           screen: "guess-hub",
         };
       }
+      // First-time recipients arrived via someone else's invite, not their own
+      // intent — lower the friction with the quick 5-question read so they
+      // reach the actual game faster. Their own Landing choice is unaffected.
       const senderSign = SIGNS.find((s) => s.n === state.invite!.u) ?? null;
-      return { ...state, partnerSign: senderSign, quizMode: "full", screen: "signs-you" };
+      return { ...state, partnerSign: senderSign, quizMode: "quick", screen: "signs-you" };
     }
     case "RESTORE":
       return { ...state, ...action.state };
@@ -412,6 +415,7 @@ export function SparkReadApp() {
           senderName={state.invite.u}
           guesses={state.invite.g}
           answers={state.recapAnswers}
+          isReturningPair={!!(state.invite.pid && loadPair(state.invite.pid))}
           onContinue={() => {
             const pair = state.invite?.pid ? loadPair(state.invite.pid) : null;
             dispatch({ type: "CONTINUE_FROM_REVEAL", pair });
