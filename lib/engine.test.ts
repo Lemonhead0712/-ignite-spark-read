@@ -207,8 +207,8 @@ describe("share and invite text", () => {
 });
 
 describe("GUESS_QS", () => {
-  it("has exactly 5 rounds of 3 questions, each with 4 options", () => {
-    expect(GUESS_QS).toHaveLength(15);
+  it("has exactly 10 rounds of 3 questions, each with 4 options", () => {
+    expect(GUESS_QS).toHaveLength(30);
     expect(GUESS_QS.length % GUESS_ROUND_SIZE).toBe(0);
     GUESS_QS.forEach((q) => expect(q.o).toHaveLength(4));
   });
@@ -232,32 +232,32 @@ describe("getGuessRoundQuestions", () => {
     expect(getGuessRoundQuestions(0)).toEqual(GUESS_QS.slice(0, 3));
   });
 
-  it("returns a different 3 questions for each of the 5 rounds", () => {
-    const rounds = [0, 1, 2, 3, 4].map((r) => getGuessRoundQuestions(r));
+  it("returns a different 3 questions for each of the 10 rounds", () => {
+    const rounds = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((r) => getGuessRoundQuestions(r));
     const allTexts = rounds.flatMap((r) => r.map((q) => q.q));
-    expect(new Set(allTexts).size).toBe(15);
+    expect(new Set(allTexts).size).toBe(30);
   });
 
-  it("does NOT repeat round 0's exact questions once a pairing plays past round 4 — a literal repeat kills the surprise", () => {
+  it("does NOT repeat round 0's exact questions once a pairing plays past round 9 — a literal repeat kills the surprise", () => {
     const round0 = getGuessRoundQuestions(0).map((q) => q.q);
-    const round5 = getGuessRoundQuestions(5).map((q) => q.q);
-    expect(round5).not.toEqual(round0);
+    const round10 = getGuessRoundQuestions(10).map((q) => q.q);
+    expect(round10).not.toEqual(round0);
   });
 
   it("keeps producing fresh groupings on later laps too, not just the second one", () => {
-    const round5 = getGuessRoundQuestions(5).map((q) => q.q);
     const round10 = getGuessRoundQuestions(10).map((q) => q.q);
-    expect(round10).not.toEqual(round5);
+    const round20 = getGuessRoundQuestions(20).map((q) => q.q);
+    expect(round20).not.toEqual(round10);
   });
 
   it("is still deterministic — the same round always returns the same questions", () => {
-    expect(getGuessRoundQuestions(5)).toEqual(getGuessRoundQuestions(5));
-    expect(getGuessRoundQuestions(12)).toEqual(getGuessRoundQuestions(12));
+    expect(getGuessRoundQuestions(10)).toEqual(getGuessRoundQuestions(10));
+    expect(getGuessRoundQuestions(24)).toEqual(getGuessRoundQuestions(24));
   });
 
-  it("still only ever draws from the 15 authored questions, even past round 4", () => {
+  it("still only ever draws from the 30 authored questions, even past round 9", () => {
     const allQuestionTexts = new Set(GUESS_QS.map((q) => q.q));
-    for (const r of [5, 6, 7, 8, 9, 10, 23]) {
+    for (const r of [10, 11, 15, 19, 20, 23, 45]) {
       for (const q of getGuessRoundQuestions(r)) {
         expect(allQuestionTexts.has(q.q)).toBe(true);
       }

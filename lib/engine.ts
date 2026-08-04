@@ -553,7 +553,7 @@ export interface GuessQuestion {
 }
 
 /**
- * 5 rounds of 3 questions each. Round 0 (the first 3) must stay word-for-word
+ * 10 rounds of 3 questions each. Round 0 (the first 3) must stay word-for-word
  * unchanged — invite links already in the wild encode only answer *indices*
  * against these exact questions/options, not the text itself, so reordering
  * or rewording round 0 would make old links show wrong comparisons.
@@ -579,6 +579,26 @@ export const GUESS_QS: GuessQuestion[] = [
   { q: "Their idea of a perfect Sunday is…", o: ["Fully planned — brunch, errands, a plan", "Zero plans, whatever the day brings", "Productive — cleaning, prepping the week", "Horizontal, phone off, doing nothing at all"] },
   { q: "When they mess up, they…", o: ["Own it immediately, no excuses", "Need a minute before they can admit it", "Apologize by doing something, not saying it", "Get defensive first, come around later"] },
   { q: "What they'd never say out loud but definitely think is…", o: ["They're a little more jealous than they let on", "They overthink texts way more than they admit", "They need more reassurance than they ask for", "They're pickier than they let on about small things"] },
+  // round 5
+  { q: "When someone compliments them, they usually…", o: ["Own it — thank you, I know", "Deflect it with a joke", "Get a little awkward and change the subject", "Immediately compliment them back"] },
+  { q: "After a big win, their instinct is to…", o: ["Celebrate loud, tell everyone", "Treat themselves quietly, just for them", "Share the news with you first", "Downplay it and move on"] },
+  { q: "As a texter, they're…", o: ["Instant replies, always on it", "Whenever they get to it — no rush", "Voice notes over typing, every time", "Would rather just call you"] },
+  // round 6
+  { q: "Caught being wrong mid-argument, they…", o: ["Admit it fast — no ego about it", "Need a minute before they can say it", "Deflect with a joke first", "Go quiet, come around later"] },
+  { q: "An unexpected free day, and they'd…", o: ["Plan something spontaneous, last minute", "Finally catch up on everything undone", "Call up friends, get out of the house", "Do absolutely nothing — that's the whole plan"] },
+  { q: "In friendships, their love language is…", o: ["The exact same as romantically", "Way more acts of service", "Way more quality time", "Totally different — playful, low-pressure"] },
+  // round 7
+  { q: "Bored on a random Tuesday night, they'd rather…", o: ["Try a new recipe or activity", "Rewatch a comfort show", "Call someone up — need people energy", "Read, journal, be alone with their thoughts"] },
+  { q: "What actually stresses them out in a relationship is…", o: ["Feeling misunderstood", "Losing their independence", "Inconsistency — hot and cold", "Conflict getting avoided instead of solved"] },
+  { q: "Their ideal vacation is…", o: ["Beach, book, do-nothing energy", "Hiking, adventure, get lost a little", "A new city, museums, way too much walking", "Somewhere familiar and cozy — no surprises"] },
+  // round 8
+  { q: "Missing you, they'd rather…", o: ["Send a random photo that reminded them of you", "Text 'thinking of you' out of nowhere", "Plan a surprise for when you're back", "Just show up — no warning needed"] },
+  { q: "Their communication pet peeve is…", o: ["Being left on read", "One-word answers", "Over-explaining the obvious", "Mixed signals — say one thing, do another"] },
+  { q: "After a mistake, what they actually need is…", o: ["Reassurance it's not a big deal", "Space to process before talking", "Help actually fixing it", "Someone to vent to, no advice needed"] },
+  // round 9
+  { q: "Plans change last minute, and they…", o: ["Roll with it, genuinely fine", "Mildly annoyed but adjust quickly", "Need a beat to reset their head", "Really struggle to shift gears"] },
+  { q: "One word for their ideal partner:", o: ["Reliable", "Exciting", "Understanding", "Honest"] },
+  { q: "Silence in a conversation, for them, is…", o: ["Totally comfortable — no need to fill it", "Something they instinctively fill", "Something they read into", "Actually kind of peaceful"] },
 ];
 
 export const GUESS_ROUND_SIZE = 3;
