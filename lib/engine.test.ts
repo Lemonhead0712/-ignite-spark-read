@@ -238,9 +238,30 @@ describe("getGuessRoundQuestions", () => {
     expect(new Set(allTexts).size).toBe(15);
   });
 
-  it("wraps around after 5 rounds instead of going out of bounds", () => {
-    expect(getGuessRoundQuestions(5)).toEqual(getGuessRoundQuestions(0));
-    expect(getGuessRoundQuestions(7)).toEqual(getGuessRoundQuestions(2));
+  it("does NOT repeat round 0's exact questions once a pairing plays past round 4 — a literal repeat kills the surprise", () => {
+    const round0 = getGuessRoundQuestions(0).map((q) => q.q);
+    const round5 = getGuessRoundQuestions(5).map((q) => q.q);
+    expect(round5).not.toEqual(round0);
+  });
+
+  it("keeps producing fresh groupings on later laps too, not just the second one", () => {
+    const round5 = getGuessRoundQuestions(5).map((q) => q.q);
+    const round10 = getGuessRoundQuestions(10).map((q) => q.q);
+    expect(round10).not.toEqual(round5);
+  });
+
+  it("is still deterministic — the same round always returns the same questions", () => {
+    expect(getGuessRoundQuestions(5)).toEqual(getGuessRoundQuestions(5));
+    expect(getGuessRoundQuestions(12)).toEqual(getGuessRoundQuestions(12));
+  });
+
+  it("still only ever draws from the 15 authored questions, even past round 4", () => {
+    const allQuestionTexts = new Set(GUESS_QS.map((q) => q.q));
+    for (const r of [5, 6, 7, 8, 9, 10, 23]) {
+      for (const q of getGuessRoundQuestions(r)) {
+        expect(allQuestionTexts.has(q.q)).toBe(true);
+      }
+    }
   });
 
   it("never throws or goes out of bounds for large or negative round numbers", () => {

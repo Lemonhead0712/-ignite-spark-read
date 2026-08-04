@@ -583,11 +583,45 @@ export const GUESS_QS: GuessQuestion[] = [
 
 export const GUESS_ROUND_SIZE = 3;
 
-/** Wraps safely for any integer round (including ones from old/foreign invite payloads). */
+// Deterministic PRNG (mulberry32) seeded from a string, so the same seed always
+// produces the same shuffle — needed so every device viewing the same round
+// number (sender guessing, recipient answering for real) sees the same questions.
+function seededShuffle<T>(items: T[], seed: string): T[] {
+  let h = 0;
+  for (let i = 0; i < seed.length; i++) h = (Math.imul(h, 31) + seed.charCodeAt(i)) | 0;
+  const next = () => {
+    h |= 0;
+    h = (h + 0x6d2b79f5) | 0;
+    let t = Math.imul(h ^ (h >>> 15), 1 | h);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+  const result = [...items];
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(next() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+}
+
+/**
+ * The first pass through all 5 rounds (round 0-4) is fixed, in authored order —
+ * round 0 must stay literally unchanged for backward compatibility with invite
+ * links already sent. Once a pairing plays past round 4, instead of looping back
+ * to round 0's exact content (which read as a dead giveaway repeat and killed the
+ * "what's next" suspense), each subsequent lap through the bank is a fresh,
+ * deterministic reshuffle of all 15 questions — so round 5 is a genuinely
+ * different grouping than round 0, round 10 different again, and so on.
+ */
 export function getGuessRoundQuestions(round: number): GuessQuestion[] {
   const totalRounds = Math.floor(GUESS_QS.length / GUESS_ROUND_SIZE);
-  const idx = ((round % totalRounds) + totalRounds) % totalRounds;
-  return GUESS_QS.slice(idx * GUESS_ROUND_SIZE, idx * GUESS_ROUND_SIZE + GUESS_ROUND_SIZE);
+  const safeRound = round < 0 ? (round % totalRounds) + totalRounds : round;
+  const cycle = Math.floor(safeRound / totalRounds);
+  const posInCycle = safeRound % totalRounds;
+  const start = posInCycle * GUESS_ROUND_SIZE;
+
+  const order = cycle === 0 ? GUESS_QS.map((_, i) => i) : seededShuffle(GUESS_QS.map((_, i) => i), `guess-cycle-${cycle}`);
+  return order.slice(start, start + GUESS_ROUND_SIZE).map((i) => GUESS_QS[i]);
 }
 
 export function buildInviteMessage(
