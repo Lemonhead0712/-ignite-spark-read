@@ -6,14 +6,21 @@ interface ResumePrompt {
   onDiscard: () => void;
 }
 
+interface ContinueGamePrompt {
+  partnerName: string;
+  onContinue: () => void;
+}
+
 export function Landing({
   onStart,
   onQuickStart,
   resume,
+  continueGame,
 }: {
   onStart: () => void;
   onQuickStart: () => void;
   resume?: ResumePrompt;
+  continueGame?: ContinueGamePrompt;
 }) {
   return (
     <section className="flex flex-1 animate-fadeUp flex-col">
@@ -65,6 +72,13 @@ export function Landing({
         <>
           <Button onClick={resume.onResume}>Continue where you left off</Button>
           <Button variant="ghost" onClick={resume.onDiscard} className="mt-sp-2">
+            Start a new read instead
+          </Button>
+        </>
+      ) : continueGame ? (
+        <>
+          <Button onClick={continueGame.onContinue}>Continue your game with {continueGame.partnerName}</Button>
+          <Button variant="ghost" onClick={onStart} className="mt-sp-2">
             Start a new read instead
           </Button>
         </>

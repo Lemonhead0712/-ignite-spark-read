@@ -175,21 +175,30 @@ describe("share and invite text", () => {
   });
 
   it("builds an invite message carrying a base64 payload link", () => {
-    const { message, link } = buildInviteMessage(userSign, partnerSign, [0, 1, 2], 72, 1, "http://localhost:3000");
+    const { message, link } = buildInviteMessage(userSign, partnerSign, [0, 1, 2], 72, 1, "pair-abc", "http://localhost:3000");
     expect(message).toContain(link);
     expect(link).toContain("http://localhost:3000/read?invite=");
   });
 
-  it("round-trips the invite payload (including round) through decodeInvitePayload", () => {
-    const { link } = buildInviteMessage(userSign, partnerSign, [0, 1, 2], 72, 1, "http://localhost:3000");
-    const raw = new URL(link).searchParams.get("invite")!;
-    const decoded = decodeInvitePayload(raw);
-    expect(decoded).toEqual({ u: "Aries", p: "Scorpio", g: [0, 1, 2], s: 72, r: 1 });
+  it("uses round-0 framing for the first invite and round-N framing after", () => {
+    const first = buildInviteMessage(userSign, partnerSign, [0, 1, 2], 72, 0, "pair-abc", "http://localhost:3000");
+    expect(first.message).toContain("I took a Spark Read on us");
+
+    const later = buildInviteMessage(userSign, partnerSign, [0, 1, 2], 72, 2, "pair-abc", "http://localhost:3000");
+    expect(later.message).toContain("Round 3!");
+    expect(later.message).not.toContain("I took a Spark Read on us");
   });
 
-  it("defaults round to 0 for older invite payloads that predate the round field", () => {
+  it("round-trips the invite payload (including round and pairing id) through decodeInvitePayload", () => {
+    const { link } = buildInviteMessage(userSign, partnerSign, [0, 1, 2], 72, 1, "pair-abc", "http://localhost:3000");
+    const raw = new URL(link).searchParams.get("invite")!;
+    const decoded = decodeInvitePayload(raw);
+    expect(decoded).toEqual({ u: "Aries", p: "Scorpio", g: [0, 1, 2], s: 72, r: 1, pid: "pair-abc" });
+  });
+
+  it("defaults round to 0 and pairing id to null for older invite payloads that predate those fields", () => {
     const legacyPayload = btoa(JSON.stringify({ u: "Aries", p: "Scorpio", g: [0, 1, 2], s: 72 }));
-    expect(decodeInvitePayload(legacyPayload)).toEqual({ u: "Aries", p: "Scorpio", g: [0, 1, 2], s: 72, r: 0 });
+    expect(decodeInvitePayload(legacyPayload)).toEqual({ u: "Aries", p: "Scorpio", g: [0, 1, 2], s: 72, r: 0, pid: null });
   });
 
   it("returns null for an invalid invite payload", () => {

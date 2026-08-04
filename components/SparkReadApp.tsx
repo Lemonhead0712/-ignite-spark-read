@@ -21,6 +21,7 @@ import {
 } from "@/lib/engine";
 import { copyText } from "@/lib/clipboard";
 import { saveOrShareResultCard } from "@/lib/resultCard";
+import { loadMostRecentPair, loadPair, savePair, type PairRecord } from "@/lib/pairs";
 import { track } from "@/lib/analytics";
 import { CopySheet } from "./ui/CopySheet";
 import { Toast } from "./ui/Toast";
@@ -31,6 +32,7 @@ import { Quiz } from "./screens/Quiz";
 import { Ignition } from "./screens/Ignition";
 import { SoloResult } from "./screens/SoloResult";
 import { GuessMode } from "./screens/GuessMode";
+import { GuessHub } from "./screens/GuessHub";
 import { Sealed } from "./screens/Sealed";
 import { InviteRecap } from "./screens/InviteRecap";
 import { InviteReveal } from "./screens/InviteReveal";
@@ -43,6 +45,11 @@ function activeQuestions(mode: QuizMode): Question[] {
   return mode === "quick" ? QUICK_QUESTIONS : QUESTIONS;
 }
 
+function generatePairingId(): string {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID();
+  return `pair-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
 type Screen =
   | "landing"
   | "signs-you"
@@ -52,10 +59,16 @@ type Screen =
   | "quiz"
   | "ignite"
   | "result"
+  | "guess-hub"
   | "guess"
   | "sealed"
   | "invite-recap"
   | "invite-reveal";
+
+// Where "back"/"sealed" navigation returns to — the Result screen for a
+// pairing's first-ever read, or the Guess Hub once a pairing is established
+// and the survey is no longer part of the repeat loop.
+type HomeScreen = "result" | "guess-hub";
 
 interface AppState {
   screen: Screen;
@@ -65,6 +78,8 @@ interface AppState {
   qi: number;
   quizAnswers: (QuestionOption | null)[];
   soloResult: SoloResultData | null;
+  homeScreen: HomeScreen;
+  pairingId: string | null;
   gi: number;
   guessAnswers: (number | null)[];
   guessRound: number;
@@ -83,16 +98,16 @@ type Action =
   | { type: "START_QUIZ" }
   | { type: "ANSWER_QUESTION"; option: QuestionOption }
   | { type: "BACK_QUESTION" }
-  | { type: "IGNITE_DONE" }
+  | { type: "IGNITE_DONE"; pairingId: string }
   | { type: "RESTART" }
   | { type: "START_GUESS" }
   | { type: "ANSWER_GUESS"; index: number }
   | { type: "BACK_GUESS" }
-  | { type: "BACK_TO_RESULT" }
+  | { type: "BACK_HOME" }
   | { type: "LOAD_INVITE"; invite: InvitePayload }
   | { type: "ANSWER_RECAP"; index: number }
   | { type: "BACK_RECAP" }
-  | { type: "CONTINUE_FROM_REVEAL" }
+  | { type: "CONTINUE_FROM_REVEAL"; pair: PairRecord | null }
   | { type: "RESTORE"; state: Partial<AppState> };
 
 const STORAGE_KEY = "ignite-progress";
@@ -106,6 +121,8 @@ function initialState(): AppState {
     qi: 0,
     quizAnswers: new Array(QUESTIONS.length).fill(null),
     soloResult: null,
+    homeScreen: "result",
+    pairingId: null,
     gi: 0,
     guessAnswers: new Array(GUESS_ROUND_SIZE).fill(null),
     guessRound: 0,
@@ -153,18 +170,22 @@ function reducer(state: AppState, action: Action): AppState {
       const S = computeScoreState(state.quizAnswers);
       const sigAnswers = state.quizAnswers.filter((o): o is QuestionOption => !!o?.cb).map((o) => o.cb as string);
       const soloResult = computeSoloResult(state.userSign, state.partnerSign, S, sigAnswers);
-      return { ...state, soloResult, screen: "result" };
+      return {
+        ...state,
+        soloResult,
+        pairingId: action.pairingId,
+        // A fresh pairing (no invite context) always starts at round 0. Arriving
+        // via an invite means the sender already used `invite.r` for their guess —
+        // this side's first guess round must be the *next* one, not round 0 again.
+        guessRound: state.invite ? (state.invite.r ?? -1) + 1 : 0,
+        homeScreen: "result",
+        screen: "result",
+      };
     }
     case "RESTART":
       return { ...initialState() };
     case "START_GUESS":
-      return {
-        ...state,
-        gi: 0,
-        guessAnswers: new Array(GUESS_ROUND_SIZE).fill(null),
-        guessRound: (state.invite?.r ?? -1) + 1,
-        screen: "guess",
-      };
+      return { ...state, gi: 0, guessAnswers: new Array(GUESS_ROUND_SIZE).fill(null), screen: "guess" };
     case "ANSWER_GUESS": {
       const nextGuesses = [...state.guessAnswers];
       nextGuesses[state.gi] = action.index;
@@ -173,8 +194,8 @@ function reducer(state: AppState, action: Action): AppState {
     }
     case "BACK_GUESS":
       return { ...state, gi: Math.max(0, state.gi - 1) };
-    case "BACK_TO_RESULT":
-      return { ...state, screen: "result" };
+    case "BACK_HOME":
+      return { ...state, screen: state.homeScreen };
     case "LOAD_INVITE":
       return { ...state, invite: action.invite, screen: "invite-recap" };
     case "ANSWER_RECAP": {
@@ -192,6 +213,18 @@ function reducer(state: AppState, action: Action): AppState {
       return { ...state, recapGi: Math.max(0, state.recapGi - 1) };
     case "CONTINUE_FROM_REVEAL": {
       if (!state.invite) return { ...state, screen: "signs-you" };
+      if (action.pair) {
+        return {
+          ...state,
+          userSign: action.pair.userSign,
+          partnerSign: action.pair.partnerSign,
+          soloResult: action.pair.soloResult,
+          pairingId: action.pair.pairingId,
+          guessRound: (state.invite.r ?? -1) + 1,
+          homeScreen: "guess-hub",
+          screen: "guess-hub",
+        };
+      }
       const senderSign = SIGNS.find((s) => s.n === state.invite!.u) ?? null;
       return { ...state, partnerSign: senderSign, quizMode: "full", screen: "signs-you" };
     }
@@ -207,6 +240,7 @@ export function SparkReadApp() {
   const [toast, setToast] = useState<{ message: string; visible: boolean }>({ message: "", visible: false });
   const [copySheet, setCopySheet] = useState<{ visible: boolean; text: string }>({ visible: false, text: "" });
   const [pendingResume, setPendingResume] = useState<Partial<AppState> | null>(null);
+  const [pendingPair, setPendingPair] = useState<PairRecord | null>(null);
 
   // Runs once after mount (client-only) so the very first render always matches SSR output.
   useEffect(() => {
@@ -225,11 +259,14 @@ export function SparkReadApp() {
         const saved = JSON.parse(savedRaw) as Partial<AppState>;
         if (saved?.screen && saved.screen !== "landing") {
           setPendingResume(saved);
+          return;
         }
       }
     } catch {
       // corrupt/unavailable storage — ignore, start fresh
     }
+    const pair = loadMostRecentPair();
+    if (pair) setPendingPair(pair);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -246,6 +283,20 @@ export function SparkReadApp() {
       // storage full/unavailable — ignore
     }
   }, [state, pendingResume]);
+
+  // Keeps this pairing's local "memory" (sign, read, round) in sync so a
+  // returning exchange with the same person can skip straight to the Guess Hub.
+  useEffect(() => {
+    if (state.pairingId && state.userSign && state.partnerSign && state.soloResult) {
+      savePair({
+        pairingId: state.pairingId,
+        userSign: state.userSign,
+        partnerSign: state.partnerSign,
+        soloResult: state.soloResult,
+        guessRound: state.guessRound,
+      });
+    }
+  }, [state.pairingId, state.userSign, state.partnerSign, state.soloResult, state.guessRound]);
 
   function showToast(message: string) {
     setToast({ message, visible: true });
@@ -282,7 +333,7 @@ export function SparkReadApp() {
   }
 
   async function handleCopyInvite() {
-    if (!state.userSign || !state.partnerSign || !state.soloResult) return;
+    if (!state.userSign || !state.partnerSign || !state.soloResult || !state.pairingId) return;
     track("invite_copy");
     const guesses = state.guessAnswers.map((g) => g ?? 0);
     const { message } = buildInviteMessage(
@@ -291,10 +342,13 @@ export function SparkReadApp() {
       guesses,
       state.soloResult.score,
       state.guessRound,
+      state.pairingId,
       window.location.origin
     );
     await handleCopy(message, "Invite copied — send it to them ✨");
   }
+
+  const backLabel = state.homeScreen === "guess-hub" ? "← Back to game" : "← Back to results";
 
   return (
     <div className="relative z-[1] mx-auto flex min-h-dvh w-full max-w-app flex-col pl-[max(20px,env(safe-area-inset-left))] pr-[max(20px,env(safe-area-inset-right))] pt-[max(22px,env(safe-area-inset-top))] pb-[max(22px,env(safe-area-inset-bottom))] md:min-h-[640px] md:max-h-[85dvh] md:max-w-[560px] md:overflow-y-auto md:rounded md:border md:border-line md:bg-[rgba(43,24,48,.45)] md:px-8 md:py-8 md:shadow-[0_30px_90px_rgba(0,0,0,.5)] lg:max-w-[600px]">
@@ -312,6 +366,28 @@ export function SparkReadApp() {
                   onDiscard: () => {
                     setPendingResume(null);
                     dispatch({ type: "START", mode: "full" });
+                  },
+                }
+              : undefined
+          }
+          continueGame={
+            pendingPair
+              ? {
+                  partnerName: pendingPair.partnerSign.n,
+                  onContinue: () => {
+                    dispatch({
+                      type: "RESTORE",
+                      state: {
+                        userSign: pendingPair.userSign,
+                        partnerSign: pendingPair.partnerSign,
+                        soloResult: pendingPair.soloResult,
+                        pairingId: pendingPair.pairingId,
+                        guessRound: pendingPair.guessRound,
+                        homeScreen: "guess-hub",
+                        screen: "guess-hub",
+                      },
+                    });
+                    setPendingPair(null);
                   },
                 }
               : undefined
@@ -336,7 +412,10 @@ export function SparkReadApp() {
           senderName={state.invite.u}
           guesses={state.invite.g}
           answers={state.recapAnswers}
-          onContinue={() => dispatch({ type: "CONTINUE_FROM_REVEAL" })}
+          onContinue={() => {
+            const pair = state.invite?.pid ? loadPair(state.invite.pid) : null;
+            dispatch({ type: "CONTINUE_FROM_REVEAL", pair });
+          }}
           onExit={() => dispatch({ type: "BACK_TO_LANDING" })}
         />
       )}
@@ -402,7 +481,14 @@ export function SparkReadApp() {
       )}
 
       {state.screen === "ignite" && state.userSign && state.partnerSign && (
-        <Ignition userSign={state.userSign} partnerSign={state.partnerSign} onComplete={() => dispatch({ type: "IGNITE_DONE" })} />
+        <Ignition
+          userSign={state.userSign}
+          partnerSign={state.partnerSign}
+          onComplete={() => {
+            const pairingId = state.pairingId ?? state.invite?.pid ?? generatePairingId();
+            dispatch({ type: "IGNITE_DONE", pairingId });
+          }}
+        />
       )}
 
       {state.screen === "result" && state.userSign && state.partnerSign && state.soloResult && (
@@ -420,21 +506,42 @@ export function SparkReadApp() {
         />
       )}
 
+      {state.screen === "guess-hub" && state.userSign && state.partnerSign && state.soloResult && (
+        <GuessHub
+          userSign={state.userSign}
+          partnerSign={state.partnerSign}
+          result={state.soloResult}
+          round={state.guessRound}
+          onPlayRound={() => {
+            track("guess_start", { guess_round: state.guessRound });
+            dispatch({ type: "START_GUESS" });
+          }}
+          onExit={() => dispatch({ type: "BACK_TO_LANDING" })}
+        />
+      )}
+
       {state.screen === "guess" && (
         <GuessMode
           round={state.guessRound}
           gi={state.gi}
+          backLabel={backLabel}
           onAnswer={(index) => {
             const isLast = state.gi + 1 >= GUESS_ROUND_SIZE;
             dispatch({ type: "ANSWER_GUESS", index });
             if (isLast) track("guess_sealed", { guess_round: state.guessRound });
           }}
-          onBack={() => dispatch({ type: "BACK_TO_RESULT" })}
+          onBack={() => dispatch({ type: "BACK_HOME" })}
           onBackQuestion={() => dispatch({ type: "BACK_GUESS" })}
         />
       )}
 
-      {state.screen === "sealed" && <Sealed onCopyInvite={handleCopyInvite} onBack={() => dispatch({ type: "BACK_TO_RESULT" })} />}
+      {state.screen === "sealed" && (
+        <Sealed
+          onCopyInvite={handleCopyInvite}
+          onBack={() => dispatch({ type: "BACK_HOME" })}
+          backLabel={state.homeScreen === "guess-hub" ? "Back to game" : "Back to my read"}
+        />
+      )}
 
       <Toast message={toast.message} visible={toast.visible} />
       <CopySheet visible={copySheet.visible} text={copySheet.text} onDone={() => setCopySheet({ visible: false, text: "" })} />

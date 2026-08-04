@@ -1,10 +1,18 @@
 import { Button } from "../ui/Button";
 import { TopBar } from "../ui/TopBar";
 
-export function Sealed({ onCopyInvite, onBack }: { onCopyInvite: () => void; onBack: () => void }) {
+export function Sealed({
+  onCopyInvite,
+  onBack,
+  backLabel = "Back to my read",
+}: {
+  onCopyInvite: () => void;
+  onBack: () => void;
+  backLabel?: string;
+}) {
   return (
     <section className="flex flex-1 animate-fadeUp flex-col">
-      <TopBar label="← Results" onAction={onBack} />
+      <TopBar label={backLabel === "Back to game" ? "← Game" : "← Results"} onAction={onBack} />
       <div className="flex flex-1 flex-col items-center justify-center gap-[18px] text-center">
         <div className="text-[3.4rem]">🔒</div>
         <h2 className="text-center font-serif text-title font-normal leading-[1.18]">Sealed. No takebacks.</h2>
@@ -14,7 +22,7 @@ export function Sealed({ onCopyInvite, onBack }: { onCopyInvite: () => void; onB
         </p>
         <Button onClick={onCopyInvite}>Copy invite to send</Button>
         <Button variant="ghost" onClick={onBack}>
-          Back to my read
+          {backLabel}
         </Button>
       </div>
     </section>

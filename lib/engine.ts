@@ -596,11 +596,15 @@ export function buildInviteMessage(
   guesses: number[],
   sparkScore: number,
   round: number,
+  pairingId: string,
   origin: string
 ): { message: string; link: string } {
-  const payload = btoa(JSON.stringify({ u: userSign.n, p: partnerSign.n, g: guesses, s: sparkScore, r: round }));
+  const payload = btoa(JSON.stringify({ u: userSign.n, p: partnerSign.n, g: guesses, s: sparkScore, r: round, pid: pairingId }));
   const link = `${origin}/read?invite=${payload}`;
-  const message = `I took a Spark Read on us (${userSign.n} × ${partnerSign.n} — we scored ${sparkScore}) and sealed 3 guesses about you. Take yours and unlock them → ${link}`;
+  const message =
+    round === 0
+      ? `I took a Spark Read on us (${userSign.n} × ${partnerSign.n} — we scored ${sparkScore}) and sealed 3 guesses about you. Take yours and unlock them → ${link}`
+      : `Round ${round + 1}! I sealed 3 fresh guesses about you — think you know me as well? Take yours and unlock them → ${link}`;
   return { message, link };
 }
 
@@ -610,13 +614,21 @@ export interface InvitePayload {
   g: number[];
   s: number;
   r: number;
+  pid: string | null;
 }
 
 export function decodeInvitePayload(raw: string): InvitePayload | null {
   try {
     const data = JSON.parse(atob(raw));
     if (typeof data?.u === "string" && typeof data?.p === "string" && typeof data?.s === "number" && Array.isArray(data?.g)) {
-      return { u: data.u, p: data.p, g: data.g, s: data.s, r: typeof data?.r === "number" ? data.r : 0 };
+      return {
+        u: data.u,
+        p: data.p,
+        g: data.g,
+        s: data.s,
+        r: typeof data?.r === "number" ? data.r : 0,
+        pid: typeof data?.pid === "string" ? data.pid : null,
+      };
     }
     return null;
   } catch {
