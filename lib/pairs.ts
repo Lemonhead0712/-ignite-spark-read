@@ -56,3 +56,13 @@ export function loadMostRecentPair(): PairRecord | null {
   if (records.length === 0) return null;
   return records.reduce((latest, r) => (r.updatedAt > latest.updatedAt ? r : latest));
 }
+
+/** Wipes all pairing memory on this device — used when the user explicitly restarts/starts over. */
+export function clearAllPairs(): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.removeItem(STORAGE_KEY);
+  } catch {
+    // storage unavailable — ignore
+  }
+}

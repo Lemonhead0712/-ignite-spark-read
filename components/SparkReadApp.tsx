@@ -21,7 +21,7 @@ import {
 } from "@/lib/engine";
 import { copyText } from "@/lib/clipboard";
 import { saveOrShareResultCard } from "@/lib/resultCard";
-import { loadMostRecentPair, loadPair, savePair, type PairRecord } from "@/lib/pairs";
+import { clearAllPairs, loadMostRecentPair, loadPair, savePair, type PairRecord } from "@/lib/pairs";
 import { track } from "@/lib/analytics";
 import { CopySheet } from "./ui/CopySheet";
 import { Toast } from "./ui/Toast";
@@ -301,6 +301,15 @@ export function SparkReadApp() {
     }
   }, [state.pairingId, state.userSign, state.partnerSign, state.soloResult, state.guessRound]);
 
+  // Full reset: on top of RESTART clearing in-memory state (and the "landing"
+  // effect below clearing ignite-progress), this also wipes ignite-pairs so a
+  // refresh afterward doesn't resurrect a "Continue your game with X" prompt.
+  function handleRestart() {
+    clearAllPairs();
+    setPendingPair(null);
+    dispatch({ type: "RESTART" });
+  }
+
   function showToast(message: string) {
     setToast({ message, visible: true });
     setTimeout(() => setToast((t) => ({ ...t, visible: false })), 2400);
@@ -420,7 +429,7 @@ export function SparkReadApp() {
           gi={state.recapGi}
           senderName={state.invite.u}
           onAnswer={(index) => dispatch({ type: "ANSWER_RECAP", index })}
-          onExit={() => dispatch({ type: "BACK_TO_LANDING" })}
+          onExit={handleRestart}
           onBackQuestion={() => dispatch({ type: "BACK_RECAP" })}
         />
       )}
@@ -436,7 +445,7 @@ export function SparkReadApp() {
             const pair = state.invite?.pid ? loadPair(state.invite.pid) : null;
             dispatch({ type: "CONTINUE_FROM_REVEAL", pair });
           }}
-          onExit={() => dispatch({ type: "BACK_TO_LANDING" })}
+          onExit={handleRestart}
         />
       )}
 
@@ -445,7 +454,7 @@ export function SparkReadApp() {
           variant="you"
           onBack={() => dispatch({ type: "BACK_TO_LANDING" })}
           onPick={(sign) => dispatch({ type: "PICK_USER", sign })}
-          onRestart={() => dispatch({ type: "RESTART" })}
+          onRestart={handleRestart}
         />
       )}
 
@@ -455,7 +464,7 @@ export function SparkReadApp() {
           sign={state.userSign}
           ctaLabel={state.invite ? "Continue — let's see how you compare" : undefined}
           onBack={() => dispatch({ type: "START", mode: state.quizMode })}
-          onRestart={() => dispatch({ type: "RESTART" })}
+          onRestart={handleRestart}
           onContinue={() => {
             if (state.partnerSign) {
               dispatch({ type: "PICK_PARTNER", sign: state.partnerSign });
@@ -471,7 +480,7 @@ export function SparkReadApp() {
           variant="them"
           onBack={() => dispatch({ type: "BACK_TO_STEP1" })}
           onPick={(sign) => dispatch({ type: "PICK_PARTNER", sign })}
-          onRestart={() => dispatch({ type: "RESTART" })}
+          onRestart={handleRestart}
         />
       )}
 
@@ -481,7 +490,7 @@ export function SparkReadApp() {
           sign={state.partnerSign}
           userElement={state.userSign.el}
           onBack={() => dispatch(state.invite ? { type: "BACK_TO_STEP1" } : { type: "GO_PARTNER_PICK" })}
-          onRestart={() => dispatch({ type: "RESTART" })}
+          onRestart={handleRestart}
           onContinue={() => {
             track("quiz_start");
             dispatch({ type: "START_QUIZ" });
@@ -501,7 +510,7 @@ export function SparkReadApp() {
           }}
           onExit={() => dispatch({ type: "BACK_TO_LANDING" })}
           onBackQuestion={() => dispatch({ type: "BACK_QUESTION" })}
-          onRestart={() => dispatch({ type: "RESTART" })}
+          onRestart={handleRestart}
         />
       )}
 
@@ -521,7 +530,7 @@ export function SparkReadApp() {
           userSign={state.userSign}
           partnerSign={state.partnerSign}
           result={state.soloResult}
-          onRetake={() => dispatch({ type: "RESTART" })}
+          onRetake={handleRestart}
           onShare={handleShare}
           onSaveImage={handleSaveImage}
           onStartGuess={() => {
@@ -541,7 +550,7 @@ export function SparkReadApp() {
             track("guess_start", { guess_round: state.guessRound });
             dispatch({ type: "START_GUESS" });
           }}
-          onExit={() => dispatch({ type: "BACK_TO_LANDING" })}
+          onExit={handleRestart}
         />
       )}
 
@@ -558,7 +567,7 @@ export function SparkReadApp() {
           }}
           onBack={() => dispatch({ type: "BACK_HOME" })}
           onBackQuestion={() => dispatch({ type: "BACK_GUESS" })}
-          onRestart={() => dispatch({ type: "RESTART" })}
+          onRestart={handleRestart}
         />
       )}
 
@@ -566,7 +575,7 @@ export function SparkReadApp() {
         <Sealed
           onCopyInvite={handleCopyInvite}
           onBack={() => dispatch({ type: "BACK_HOME" })}
-          onRestart={() => dispatch({ type: "RESTART" })}
+          onRestart={handleRestart}
           backLabel={state.homeScreen === "guess-hub" ? "Back to game" : "Back to my read"}
         />
       )}
