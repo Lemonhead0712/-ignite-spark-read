@@ -14,11 +14,13 @@ interface ContinueGamePrompt {
 export function Landing({
   onStart,
   onQuickStart,
+  onShareApp,
   resume,
   continueGame,
 }: {
   onStart: () => void;
   onQuickStart: () => void;
+  onShareApp: () => void;
   resume?: ResumePrompt;
   continueGame?: ContinueGamePrompt;
 }) {
@@ -26,6 +28,12 @@ export function Landing({
     <section className="flex flex-1 animate-fadeUp flex-col">
       <div className="mb-sp-2 flex min-h-[32px] items-center justify-between">
         <Brand />
+        <button
+          onClick={onShareApp}
+          className="p-[6px_2px] font-sans text-meta text-ivory-dim focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--ember-2)] focus-visible:outline-offset-[3px] focus-visible:rounded-[6px]"
+        >
+          Share ⤴
+        </button>
       </div>
       <div className="flex flex-1 flex-col justify-center gap-sp-3 pb-sp-5">
         <svg viewBox="0 0 512 512" className="h-[clamp(64px,12vw,96px)] w-[clamp(64px,12vw,96px)]" aria-hidden="true">

@@ -322,6 +322,21 @@ export function SparkReadApp() {
     await handleCopy(text, "Copied — paste it anywhere ✨");
   }
 
+  async function handleShareApp() {
+    track("share_app_tap");
+    const shareText = "Know what they want, without asking. Two minutes, zero mercy.";
+    const url = window.location.origin;
+    if (typeof navigator !== "undefined" && navigator.share) {
+      try {
+        await navigator.share({ title: "Ignite — Spark Read", text: shareText, url });
+        return;
+      } catch {
+        // user cancelled or share failed — fall through to clipboard copy
+      }
+    }
+    await handleCopy(`${shareText} ${url}`, "Link copied — share it anywhere ✨");
+  }
+
   async function handleSaveImage() {
     if (!state.userSign || !state.partnerSign || !state.soloResult) return;
     track("save_image");
@@ -359,6 +374,7 @@ export function SparkReadApp() {
         <Landing
           onStart={() => dispatch({ type: "START", mode: "full" })}
           onQuickStart={() => dispatch({ type: "START", mode: "quick" })}
+          onShareApp={handleShareApp}
           resume={
             pendingResume
               ? {
@@ -528,6 +544,7 @@ export function SparkReadApp() {
         <GuessMode
           round={state.guessRound}
           gi={state.gi}
+          partnerName={state.partnerSign?.n ?? "they"}
           backLabel={backLabel}
           onAnswer={(index) => {
             const isLast = state.gi + 1 >= GUESS_ROUND_SIZE;

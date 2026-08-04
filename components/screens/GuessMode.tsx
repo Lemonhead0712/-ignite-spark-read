@@ -5,6 +5,7 @@ import { TopBar } from "../ui/TopBar";
 export function GuessMode({
   round,
   gi,
+  partnerName,
   onAnswer,
   onBack,
   onBackQuestion,
@@ -12,6 +13,7 @@ export function GuessMode({
 }: {
   round: number;
   gi: number;
+  partnerName: string;
   onAnswer: (optionIndex: number) => void;
   onBack: () => void;
   onBackQuestion: () => void;
@@ -26,10 +28,13 @@ export function GuessMode({
       <ProgressBar percent={(gi / GUESS_ROUND_SIZE) * 100} />
       <div className="mb-sp-3">
         <div className="text-label uppercase tracking-[.2em] text-rose">
-          Guess {gi + 1} of {GUESS_ROUND_SIZE} · How would THEY answer?
+          Guess {gi + 1} of {GUESS_ROUND_SIZE} · How would {partnerName} answer?
         </div>
-        {gi === 0 && round > 0 && (
-          <div className="mt-sp-1 text-meta text-ivory-dim">Fresh questions this round — keep them guessing.</div>
+        {gi === 0 && (
+          <div className="mt-sp-1 text-meta text-ivory-dim">
+            Answer as {partnerName} would — not how you would.
+            {round > 0 && " Fresh questions this round."}
+          </div>
         )}
         {gi > 0 && (
           <button

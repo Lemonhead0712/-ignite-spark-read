@@ -16,6 +16,7 @@ export type AnalyticsEvent =
   | "guess_start"
   | "guess_sealed"
   | "share_tap"
+  | "share_app_tap"
   | "save_image"
   | "invite_copy";
 
