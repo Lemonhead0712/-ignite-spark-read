@@ -8,6 +8,7 @@ interface SignPickerProps {
   variant: "you" | "them";
   onBack: () => void;
   onPick: (sign: Sign) => void;
+  onRestart: () => void;
 }
 
 const COPY = {
@@ -25,7 +26,7 @@ const COPY = {
   },
 };
 
-export function SignPicker({ variant, onBack, onPick }: SignPickerProps) {
+export function SignPicker({ variant, onBack, onPick, onRestart }: SignPickerProps) {
   const [selected, setSelected] = useState<string | null>(null);
   const copy = COPY[variant];
   const selColor = variant === "you" ? "var(--you)" : "var(--them)";
@@ -37,7 +38,7 @@ export function SignPicker({ variant, onBack, onPick }: SignPickerProps) {
 
   return (
     <section className="flex flex-1 animate-fadeUp flex-col">
-      <TopBar label={copy.backLabel} onAction={onBack} />
+      <TopBar label={copy.backLabel} onAction={onBack} onRestart={onRestart} />
       <span className="mb-sp-1 block text-label uppercase tracking-[.24em] text-rose">{copy.eyebrow}</span>
       <h2 className="mb-[6px] font-serif text-title font-normal leading-[1.18]">{copy.title}</h2>
       <p className="mb-sp-2 text-body text-ivory-dim">{copy.sub}</p>

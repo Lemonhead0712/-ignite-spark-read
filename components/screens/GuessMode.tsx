@@ -9,6 +9,7 @@ export function GuessMode({
   onAnswer,
   onBack,
   onBackQuestion,
+  onRestart,
   backLabel = "← Back to results",
 }: {
   round: number;
@@ -17,6 +18,7 @@ export function GuessMode({
   onAnswer: (optionIndex: number) => void;
   onBack: () => void;
   onBackQuestion: () => void;
+  onRestart: () => void;
   backLabel?: string;
 }) {
   const questions = getGuessRoundQuestions(round);
@@ -24,7 +26,7 @@ export function GuessMode({
 
   return (
     <section className="flex flex-1 animate-fadeUp flex-col">
-      <TopBar label={backLabel} onAction={onBack} />
+      <TopBar label={backLabel} onAction={onBack} onRestart={onRestart} />
       <ProgressBar percent={(gi / GUESS_ROUND_SIZE) * 100} />
       <div className="mb-sp-3">
         <div className="text-label uppercase tracking-[.2em] text-rose">

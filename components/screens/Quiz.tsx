@@ -8,18 +8,20 @@ export function Quiz({
   onAnswer,
   onExit,
   onBackQuestion,
+  onRestart,
 }: {
   questions: Question[];
   qi: number;
   onAnswer: (option: QuestionOption) => void;
   onExit: () => void;
   onBackQuestion: () => void;
+  onRestart: () => void;
 }) {
   const question = questions[qi];
 
   return (
     <section className="flex flex-1 animate-fadeUp flex-col">
-      <TopBar label="✕ Exit" onAction={onExit} />
+      <TopBar label="✕ Exit" onAction={onExit} onRestart={onRestart} />
       <ProgressBar percent={(qi / questions.length) * 100} />
       <div className="mb-sp-3">
         <div className="text-label uppercase tracking-[.2em] text-rose">

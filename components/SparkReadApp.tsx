@@ -445,6 +445,7 @@ export function SparkReadApp() {
           variant="you"
           onBack={() => dispatch({ type: "BACK_TO_LANDING" })}
           onPick={(sign) => dispatch({ type: "PICK_USER", sign })}
+          onRestart={() => dispatch({ type: "RESTART" })}
         />
       )}
 
@@ -454,6 +455,7 @@ export function SparkReadApp() {
           sign={state.userSign}
           ctaLabel={state.invite ? "Continue — let's see how you compare" : undefined}
           onBack={() => dispatch({ type: "START", mode: state.quizMode })}
+          onRestart={() => dispatch({ type: "RESTART" })}
           onContinue={() => {
             if (state.partnerSign) {
               dispatch({ type: "PICK_PARTNER", sign: state.partnerSign });
@@ -469,6 +471,7 @@ export function SparkReadApp() {
           variant="them"
           onBack={() => dispatch({ type: "BACK_TO_STEP1" })}
           onPick={(sign) => dispatch({ type: "PICK_PARTNER", sign })}
+          onRestart={() => dispatch({ type: "RESTART" })}
         />
       )}
 
@@ -478,6 +481,7 @@ export function SparkReadApp() {
           sign={state.partnerSign}
           userElement={state.userSign.el}
           onBack={() => dispatch(state.invite ? { type: "BACK_TO_STEP1" } : { type: "GO_PARTNER_PICK" })}
+          onRestart={() => dispatch({ type: "RESTART" })}
           onContinue={() => {
             track("quiz_start");
             dispatch({ type: "START_QUIZ" });
@@ -497,6 +501,7 @@ export function SparkReadApp() {
           }}
           onExit={() => dispatch({ type: "BACK_TO_LANDING" })}
           onBackQuestion={() => dispatch({ type: "BACK_QUESTION" })}
+          onRestart={() => dispatch({ type: "RESTART" })}
         />
       )}
 
@@ -553,6 +558,7 @@ export function SparkReadApp() {
           }}
           onBack={() => dispatch({ type: "BACK_HOME" })}
           onBackQuestion={() => dispatch({ type: "BACK_GUESS" })}
+          onRestart={() => dispatch({ type: "RESTART" })}
         />
       )}
 
@@ -560,6 +566,7 @@ export function SparkReadApp() {
         <Sealed
           onCopyInvite={handleCopyInvite}
           onBack={() => dispatch({ type: "BACK_HOME" })}
+          onRestart={() => dispatch({ type: "RESTART" })}
           backLabel={state.homeScreen === "guess-hub" ? "Back to game" : "Back to my read"}
         />
       )}

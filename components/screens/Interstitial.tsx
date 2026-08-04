@@ -7,6 +7,7 @@ interface Step1Props {
   sign: Sign;
   onContinue: () => void;
   onBack: () => void;
+  onRestart: () => void;
   ctaLabel?: string;
 }
 
@@ -16,6 +17,7 @@ interface Step2Props {
   userElement: Sign["el"];
   onContinue: () => void;
   onBack: () => void;
+  onRestart: () => void;
 }
 
 export function Interstitial(props: Step1Props | Step2Props) {
@@ -24,7 +26,7 @@ export function Interstitial(props: Step1Props | Step2Props) {
 
   return (
     <section className="flex flex-1 animate-fadeUp flex-col">
-      <TopBar label="← Back" onAction={props.onBack} />
+      <TopBar label="← Back" onAction={props.onBack} onRestart={props.onRestart} />
       <div className="flex flex-1 flex-col items-center justify-center gap-sp-3 text-center">
         <span className={`step-glyph ${isStep2 ? "them" : "you"}`}>{props.sign.g}</span>
 
