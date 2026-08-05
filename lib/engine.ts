@@ -644,6 +644,48 @@ export function getGuessRoundQuestions(round: number): GuessQuestion[] {
   return order.slice(start, start + GUESS_ROUND_SIZE).map((i) => GUESS_QS[i]);
 }
 
+export interface GuessRoundQuestionResult {
+  question: string;
+  guessIndex: number;
+  guessLabel: string;
+  answerIndex: number | null;
+  answerLabel: string | null;
+  correct: boolean;
+}
+
+export interface GuessRoundResult {
+  round: number;
+  correctCount: number;
+  totalCount: number;
+  questions: GuessRoundQuestionResult[];
+}
+
+// Snapshots resolved question/option text rather than just indices, so a later
+// expansion of GUESS_QS (which shifts cycle>0's reshuffled ordering) can never
+// retroactively corrupt history recorded before the change.
+export function computeRoundResult(round: number, guesses: number[], answers: (number | null)[]): GuessRoundResult {
+  const questions = getGuessRoundQuestions(round);
+  const results = questions.map((q, i) => {
+    const guessIndex = guesses[i] ?? -1;
+    const answerIndex = answers[i] ?? null;
+    const correct = answerIndex !== null && guessIndex === answerIndex;
+    return {
+      question: q.q,
+      guessIndex,
+      guessLabel: q.o[guessIndex] ?? "—",
+      answerIndex,
+      answerLabel: answerIndex !== null ? q.o[answerIndex] : null,
+      correct,
+    };
+  });
+  return {
+    round,
+    correctCount: results.filter((r) => r.correct).length,
+    totalCount: results.length,
+    questions: results,
+  };
+}
+
 export function buildInviteMessage(
   userSign: Sign,
   partnerSign: Sign,

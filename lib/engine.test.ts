@@ -9,6 +9,7 @@ import {
   SIGNS,
   buildInviteMessage,
   buildShareText,
+  computeRoundResult,
   computeScore,
   decodeInvitePayload,
   computeSoloResult,
@@ -267,6 +268,55 @@ describe("getGuessRoundQuestions", () => {
   it("never throws or goes out of bounds for large or negative round numbers", () => {
     expect(getGuessRoundQuestions(-3)).toHaveLength(3);
     expect(getGuessRoundQuestions(1000)).toHaveLength(3);
+  });
+});
+
+describe("computeRoundResult", () => {
+  it("marks every question correct when guesses match answers exactly", () => {
+    const result = computeRoundResult(0, [0, 0, 0], [0, 0, 0]);
+    expect(result.correctCount).toBe(3);
+    expect(result.totalCount).toBe(3);
+    result.questions.forEach((q) => {
+      expect(q.correct).toBe(true);
+      expect(q.guessLabel).toBe(q.answerLabel);
+    });
+  });
+
+  it("marks every question wrong when no guess matches its answer", () => {
+    const result = computeRoundResult(0, [0, 0, 0], [1, 1, 1]);
+    expect(result.correctCount).toBe(0);
+    result.questions.forEach((q) => expect(q.correct).toBe(false));
+  });
+
+  it("counts a mixed round correctly, question by question", () => {
+    const result = computeRoundResult(0, [0, 1, 2], [0, 2, 3]);
+    expect(result.correctCount).toBe(1);
+    expect(result.questions[0].correct).toBe(true);
+    expect(result.questions[1].correct).toBe(false);
+    expect(result.questions[2].correct).toBe(false);
+  });
+
+  it("treats an unanswered (null) question as incorrect without throwing", () => {
+    const result = computeRoundResult(0, [0, 0, 0], [null, 0, 0]);
+    expect(result.questions[0].correct).toBe(false);
+    expect(result.questions[0].answerLabel).toBeNull();
+    expect(result.correctCount).toBe(2);
+  });
+
+  it("resolves question/guess/answer text that exactly matches GUESS_QS for a known round", () => {
+    const result = computeRoundResult(0, [1, 2, 3], [2, 3, 0]);
+    const round0 = GUESS_QS.slice(0, 3);
+    result.questions.forEach((q, i) => {
+      expect(q.question).toBe(round0[i].q);
+      expect(q.guessLabel).toBe(round0[i].o[[1, 2, 3][i]]);
+      expect(q.answerLabel).toBe(round0[i].o[[2, 3, 0][i]]);
+    });
+  });
+
+  it("resolves cleanly for a cycle>0 (reshuffled) round without throwing", () => {
+    const result = computeRoundResult(12, [0, 1, 2], [0, 1, 2]);
+    expect(result.questions).toHaveLength(getGuessRoundQuestions(12).length);
+    expect(result.round).toBe(12);
   });
 });
 

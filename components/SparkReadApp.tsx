@@ -9,6 +9,7 @@ import {
   applyWeights,
   buildInviteMessage,
   buildShareText,
+  computeRoundResult,
   computeSoloResult,
   createEmptyScoreState,
   decodeInvitePayload,
@@ -22,6 +23,7 @@ import {
 import { copyText } from "@/lib/clipboard";
 import { saveOrShareResultCard } from "@/lib/resultCard";
 import { clearAllPairs, loadMostRecentPair, loadPair, savePair, type PairRecord } from "@/lib/pairs";
+import { appendRoundHistory, clearRoundHistory, loadRoundHistory, type RoundHistoryEntry } from "@/lib/roundHistory";
 import { track } from "@/lib/analytics";
 import { CopySheet } from "./ui/CopySheet";
 import { Toast } from "./ui/Toast";
@@ -36,6 +38,7 @@ import { GuessHub } from "./screens/GuessHub";
 import { Sealed } from "./screens/Sealed";
 import { InviteRecap } from "./screens/InviteRecap";
 import { InviteReveal } from "./screens/InviteReveal";
+import { Scorecard } from "./screens/Scorecard";
 
 const QUICK_QUESTIONS: Question[] = QUICK_QUESTION_INDICES.map((i) => QUESTIONS[i]);
 
@@ -63,7 +66,8 @@ type Screen =
   | "guess"
   | "sealed"
   | "invite-recap"
-  | "invite-reveal";
+  | "invite-reveal"
+  | "scorecard";
 
 // Where "back"/"sealed" navigation returns to — the Result screen for a
 // pairing's first-ever read, or the Guess Hub once a pairing is established
@@ -108,6 +112,7 @@ type Action =
   | { type: "ANSWER_RECAP"; index: number }
   | { type: "BACK_RECAP" }
   | { type: "CONTINUE_FROM_REVEAL"; pair: PairRecord | null }
+  | { type: "GO_SCORECARD" }
   | { type: "RESTORE"; state: Partial<AppState> };
 
 const STORAGE_KEY = "ignite-progress";
@@ -231,6 +236,8 @@ function reducer(state: AppState, action: Action): AppState {
       const senderSign = SIGNS.find((s) => s.n === state.invite!.u) ?? null;
       return { ...state, partnerSign: senderSign, quizMode: "quick", screen: "signs-you" };
     }
+    case "GO_SCORECARD":
+      return { ...state, screen: "scorecard" };
     case "RESTORE":
       return { ...state, ...action.state };
     default:
@@ -244,6 +251,7 @@ export function SparkReadApp() {
   const [copySheet, setCopySheet] = useState<{ visible: boolean; text: string }>({ visible: false, text: "" });
   const [pendingResume, setPendingResume] = useState<Partial<AppState> | null>(null);
   const [pendingPair, setPendingPair] = useState<PairRecord | null>(null);
+  const [scorecardHistory, setScorecardHistory] = useState<RoundHistoryEntry[]>([]);
 
   // Runs once after mount (client-only) so the very first render always matches SSR output.
   useEffect(() => {
@@ -301,12 +309,24 @@ export function SparkReadApp() {
     }
   }, [state.pairingId, state.userSign, state.partnerSign, state.soloResult, state.guessRound]);
 
+  // Keeps Scorecard's history in sync with whichever pairing is active, no matter
+  // how this screen was reached (button click, resumed via ignite-progress, etc.) —
+  // loading it only from the "View Scorecard" click handler missed the resume path.
+  useEffect(() => {
+    if (state.screen === "scorecard" && state.pairingId) {
+      setScorecardHistory(loadRoundHistory(state.pairingId));
+    }
+  }, [state.screen, state.pairingId]);
+
   // Full reset: on top of RESTART clearing in-memory state (and the "landing"
-  // effect below clearing ignite-progress), this also wipes ignite-pairs so a
-  // refresh afterward doesn't resurrect a "Continue your game with X" prompt.
+  // effect below clearing ignite-progress), this also wipes ignite-pairs and
+  // ignite-round-history so a refresh afterward doesn't resurrect a "Continue
+  // your game with X" prompt or a stale Scorecard.
   function handleRestart() {
     clearAllPairs();
+    clearRoundHistory();
     setPendingPair(null);
+    setScorecardHistory([]);
     dispatch({ type: "RESTART" });
   }
 
@@ -442,6 +462,10 @@ export function SparkReadApp() {
           answers={state.recapAnswers}
           isReturningPair={!!(state.invite.pid && loadPair(state.invite.pid))}
           onContinue={() => {
+            if (state.invite?.pid) {
+              const roundResult = computeRoundResult(state.invite.r, state.invite.g, state.recapAnswers);
+              appendRoundHistory(state.invite.pid, { ...roundResult, senderName: state.invite.u, recordedAt: Date.now() });
+            }
             const pair = state.invite?.pid ? loadPair(state.invite.pid) : null;
             dispatch({ type: "CONTINUE_FROM_REVEAL", pair });
           }}
@@ -550,6 +574,21 @@ export function SparkReadApp() {
             track("guess_start", { guess_round: state.guessRound });
             dispatch({ type: "START_GUESS" });
           }}
+          onViewScorecard={() => {
+            track("scorecard_view");
+            dispatch({ type: "GO_SCORECARD" });
+          }}
+          onExit={handleRestart}
+        />
+      )}
+
+      {state.screen === "scorecard" && state.userSign && state.partnerSign && state.soloResult && (
+        <Scorecard
+          userSign={state.userSign}
+          partnerSign={state.partnerSign}
+          result={state.soloResult}
+          history={scorecardHistory}
+          onBack={() => dispatch({ type: "BACK_HOME" })}
           onExit={handleRestart}
         />
       )}

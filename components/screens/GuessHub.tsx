@@ -8,6 +8,7 @@ export function GuessHub({
   result,
   round,
   onPlayRound,
+  onViewScorecard,
   onExit,
 }: {
   userSign: Sign;
@@ -15,6 +16,7 @@ export function GuessHub({
   result: SoloResultData;
   round: number;
   onPlayRound: () => void;
+  onViewScorecard: () => void;
   onExit: () => void;
 }) {
   return (
@@ -45,6 +47,9 @@ export function GuessHub({
         <div className="text-meta text-ivory-dim">Round {round + 1}</div>
         <Button onClick={onPlayRound} className="max-w-[320px]">
           Play round {round + 1}
+        </Button>
+        <Button variant="ghost" onClick={onViewScorecard} className="max-w-[320px]">
+          View Scorecard
         </Button>
       </div>
     </section>

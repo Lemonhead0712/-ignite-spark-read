@@ -18,7 +18,8 @@ export type AnalyticsEvent =
   | "share_tap"
   | "share_app_tap"
   | "save_image"
-  | "invite_copy";
+  | "invite_copy"
+  | "scorecard_view";
 
 export type AnalyticsProps = Record<string, string | number | boolean | undefined>;
 
